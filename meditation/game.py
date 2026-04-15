@@ -1,0 +1,129 @@
+"""Main game loop - ties all meditation systems together."""
+
+import pyray as rl
+
+from meditation.anomalies import Anomalies
+from meditation.atmosphere import Atmosphere
+from meditation.breath_motes import BreathMotes
+from meditation.breathing import BreathingGuide
+from meditation.colors import grey
+from meditation.figure import StickFigure
+from meditation.sacred import SacredGeometry
+
+INIT_W: int = 800
+INIT_H: int = 600
+TITLE: str = "v i b e"
+
+
+def run() -> None:
+    """Initialise the window and run the meditation loop until closed."""
+    rl.set_config_flags(
+        rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_MSAA_4X_HINT  # type: ignore[arg-type]
+    )
+    rl.init_window(INIT_W, INIT_H, TITLE)
+    rl.set_target_fps(60)
+
+    cx: float = INIT_W / 2.0
+    cy: float = INIT_H / 2.0
+
+    figure: StickFigure = StickFigure(cx, cy)
+    breathing: BreathingGuide = BreathingGuide(cx, cy)
+    atmosphere: Atmosphere = Atmosphere(INIT_W, INIT_H)
+    sacred: SacredGeometry = SacredGeometry()
+    anomalies: Anomalies = Anomalies()
+    motes: BreathMotes = BreathMotes()
+
+    intro_timer: float = 6.0  # seconds to display the hint text
+
+    while not rl.window_should_close():
+        dt: float = rl.get_frame_time()
+        w: int = rl.get_screen_width()
+        h: int = rl.get_screen_height()
+
+        # -- update ------------------------------------------------------ #
+        figure.update(dt, w, h)
+        breathing.update(dt)
+        atmosphere.update(dt, w, h, flow=figure.flow)
+        sacred.update(dt, figure.flow)
+
+        # Anomaly intensity ramps from 0 to 1 starting after the prompt fades
+        anomaly_ramp: float = max(
+            0.0,
+            min(
+                1.0,
+                (breathing.cycles_completed
+                 - breathing.FADE_AFTER_CYCLES
+                 - breathing.FADE_OVER_CYCLES)
+                / 6.0,  # reach full intensity over ~6 more cycles
+            ),
+        )
+        anomalies.update(dt, anomaly_ramp, w, h)
+
+        # Breath motes from the figure's hands
+        lh, rh = figure.hand_positions()
+        motes.update(
+            dt,
+            left_hand_x=lh.x, left_hand_y=lh.y,
+            right_hand_x=rh.x, right_hand_y=rh.y,
+            breath_t=breathing.breath_t,
+            is_inhaling=breathing.is_inhaling,
+            flow=figure.flow,
+        )
+
+        # Wind particles in the opposite direction of figure movement
+        atmosphere.set_wind(-figure.vx, -figure.vy)
+
+        # Keep the breathing guide tracked to the figure
+        breathing.x = figure.x
+        breathing.y = figure.y
+
+        intro_timer = max(0.0, intro_timer - dt)
+
+        # -- draw -------------------------------------------------------- #
+        rl.begin_drawing()
+        rl.clear_background(grey(6))
+
+        # 1. Atmosphere particles / shooting stars
+        atmosphere.draw_particles()
+
+        # 1.2 Constellation lines between nearby particles
+        atmosphere.draw_constellations(figure.flow)
+
+        # 1.5 Fleeting anomalies (between particles and mandala)
+        anomalies.draw()
+
+        # 1.7 Fireflies
+        atmosphere.draw_fireflies()
+
+        # 2. Sacred geometry mandala (breathes + acts as the main visual)
+        sacred.draw(figure.x, figure.y, breathing.breath_t)
+
+        # 2.5 Breath motes from hands
+        motes.draw()
+
+        # 3. Ghost trail (behind the figure)
+        figure.draw_ghost_trail()
+
+        # 4. Stick figure
+        figure.draw(breath_t=breathing.breath_t)
+
+        # 5. Breathing prompt
+        breathing.draw_prompt(w, h)
+
+        # 7. Intro hint (fades out)
+        if intro_timer > 0.0:
+            fade: float = min(1.0, intro_timer / 2.0)
+            hint: str = "move with arrow keys"
+            fs: int = 18
+            tw: int = rl.measure_text(hint, fs)
+            rl.draw_text(
+                hint,
+                (w - tw) // 2,
+                40,
+                fs,
+                grey(190, int(fade * 255)),
+            )
+
+        rl.end_drawing()
+
+    rl.close_window()
