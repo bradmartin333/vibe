@@ -110,7 +110,7 @@ class _Fish:
         return (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.0
 
     def draw(self, time: float) -> None:
-        """Draw the fish using simple shapes."""
+        """Draw the fish with smooth organic curves."""
         if not self.active:
             return
 
@@ -120,45 +120,128 @@ class _Fish:
         # body color
         body_color: rl.Color = hue_shift(t, speed=0.06, saturation=0.55,
                                           brightness=0.65, alpha=200)
+        body_light: rl.Color = hue_shift(t, speed=0.06, saturation=0.35,
+                                          brightness=0.75, alpha=140)
         fin_color: rl.Color = hue_shift(t + 1.5, speed=0.06, saturation=0.45,
                                          brightness=0.50, alpha=160)
 
         bl: float = self.body_length
         cx: float = self.x
         cy: float = self.y
+        tail_swing: float = math.sin(self.wobble_phase * 3.0) * 0.25
 
-        # tail (triangle behind the body)
-        tail_wobble: float = math.sin(self.wobble_phase * 3.0) * 6.0
-        tail_x: float = cx + facing * bl * 1.1
-        t1: rl.Vector2 = rl.Vector2(tail_x, cy)
-        t2: rl.Vector2 = rl.Vector2(tail_x + facing * bl * 0.6,
-                                      cy - bl * 0.5 + tail_wobble)
-        t3: rl.Vector2 = rl.Vector2(tail_x + facing * bl * 0.6,
-                                      cy + bl * 0.5 + tail_wobble)
-        rl.draw_triangle(t1, t2, t3, fin_color)
-        rl.draw_triangle(t1, t3, t2, fin_color)  # backface
+        # -- smooth body outline via point-sampled ellipse with taper -- #
+        segments: int = 32
+        body_pts: list[tuple[float, float]] = []
+        for i in range(segments + 1):
+            angle: float = (i / segments) * math.tau
+            # base ellipse
+            ex: float = math.cos(angle) * bl
+            ey: float = math.sin(angle) * bl * 0.5
+            # taper toward the tail: shrink ey when ex is on the tail side
+            tail_side: float = ex * facing  # positive when toward tail
+            if tail_side > 0:
+                taper: float = 1.0 - (tail_side / bl) * 0.5
+                ey *= max(0.15, taper)
+                # bend tail with swim motion
+                ex += tail_side * tail_swing * 0.6
+                ey += tail_side / bl * tail_swing * bl * 0.4
+            body_pts.append((cx + ex, cy + ey))
 
-        # body (ellipse via scaled circle)
-        rl.draw_ellipse(int(cx), int(cy), bl * 1.0, bl * 0.55, body_color)
+        # fill body with layered ellipses for a soft gradient look
+        for layer in range(3):
+            shrink: float = 1.0 - layer * 0.2
+            y_off: float = layer * bl * 0.06
+            col: rl.Color = body_light if layer == 0 else body_color
+            rl.draw_ellipse(
+                int(cx), int(cy + y_off),
+                bl * shrink, bl * 0.48 * shrink,
+                col,
+            )
 
-        # dorsal fin (small triangle on top)
-        fin_x: float = cx + facing * bl * 0.1
-        df1: rl.Vector2 = rl.Vector2(fin_x, cy - bl * 0.5)
-        df2: rl.Vector2 = rl.Vector2(fin_x + facing * bl * 0.3,
-                                       cy - bl * 0.85)
-        df3: rl.Vector2 = rl.Vector2(fin_x + facing * bl * 0.5,
-                                       cy - bl * 0.45)
-        rl.draw_triangle(df1, df2, df3, fin_color)
-        rl.draw_triangle(df1, df3, df2, fin_color)
+        # draw smooth outline on top
+        for i in range(len(body_pts) - 1):
+            rl.draw_line_ex(
+                rl.Vector2(body_pts[i][0], body_pts[i][1]),
+                rl.Vector2(body_pts[i + 1][0], body_pts[i + 1][1]),
+                1.2, body_color,
+            )
 
-        # eye
-        eye_x: float = cx - facing * bl * 0.5
-        eye_y: float = cy - bl * 0.12
-        eye_r: float = bl * 0.12
+        # -- tail (smooth fan of curved lines) -- #
+        tail_base_x: float = cx + facing * bl * 0.85
+        tail_base_x += facing * tail_swing * bl * 0.3
+        num_rays: int = 9
+        for i in range(num_rays):
+            frac: float = (i / (num_rays - 1)) - 0.5  # -0.5 to 0.5
+            tip_x: float = tail_base_x + facing * bl * 0.7
+            tip_y: float = cy + frac * bl * 1.1 + tail_swing * bl * 0.5
+            # intermediate control point for a curve
+            mid_x: float = (tail_base_x + tip_x) * 0.5 + facing * bl * 0.1
+            mid_y: float = (cy + tip_y) * 0.5 + frac * bl * 0.3
+            # draw as two-segment polyline for smooth curve
+            p0: rl.Vector2 = rl.Vector2(tail_base_x, cy + frac * bl * 0.3)
+            p1: rl.Vector2 = rl.Vector2(mid_x, mid_y)
+            p2: rl.Vector2 = rl.Vector2(tip_x, tip_y)
+            ray_alpha: int = _clamp(int(160 - abs(frac) * 120))
+            ray_col: rl.Color = hue_shift(t + 1.5 + frac, speed=0.06,
+                                           saturation=0.45, brightness=0.50,
+                                           alpha=ray_alpha)
+            rl.draw_line_ex(p0, p1, 1.5, ray_col)
+            rl.draw_line_ex(p1, p2, 1.0, ray_col)
+
+        # -- dorsal fin (smooth arc) -- #
+        fin_steps: int = 8
+        for i in range(fin_steps):
+            frac1: float = i / fin_steps
+            frac2: float = (i + 1) / fin_steps
+            fx1: float = cx + facing * bl * (-0.1 + frac1 * 0.6)
+            fx2: float = cx + facing * bl * (-0.1 + frac2 * 0.6)
+            # arc height peaks in the middle
+            h1: float = math.sin(frac1 * math.pi) * bl * 0.35
+            h2: float = math.sin(frac2 * math.pi) * bl * 0.35
+            rl.draw_line_ex(
+                rl.Vector2(fx1, cy - bl * 0.45 - h1),
+                rl.Vector2(fx2, cy - bl * 0.45 - h2),
+                1.5, fin_color,
+            )
+        # connect fin base to body
+        rl.draw_line_ex(
+            rl.Vector2(cx + facing * bl * -0.1, cy - bl * 0.45),
+            rl.Vector2(cx + facing * bl * 0.5, cy - bl * 0.45),
+            1.0, fin_color,
+        )
+
+        # -- pectoral fin (small curved line on belly) -- #
+        pf_x: float = cx - facing * bl * 0.15
+        for i in range(5):
+            f1: float = i / 5
+            f2: float = (i + 1) / 5
+            px1: float = pf_x + facing * f1 * bl * 0.3
+            px2: float = pf_x + facing * f2 * bl * 0.3
+            ph1: float = math.sin(f1 * math.pi) * bl * 0.18
+            ph2: float = math.sin(f2 * math.pi) * bl * 0.18
+            rl.draw_line_ex(
+                rl.Vector2(px1, cy + bl * 0.3 + ph1),
+                rl.Vector2(px2, cy + bl * 0.3 + ph2),
+                1.0, fin_color,
+            )
+
+        # -- eye -- #
+        eye_x: float = cx - facing * bl * 0.55
+        eye_y: float = cy - bl * 0.08
+        eye_r: float = bl * 0.13
+        # soft glow around eye
+        rl.draw_circle_v(rl.Vector2(eye_x, eye_y), eye_r * 1.5,
+                         rl.Color(255, 255, 255, 40))
         rl.draw_circle_v(rl.Vector2(eye_x, eye_y), eye_r,
-                         rl.Color(255, 255, 255, 220))
+                         rl.Color(255, 255, 255, 200))
         rl.draw_circle_v(rl.Vector2(eye_x - facing * eye_r * 0.3, eye_y),
-                         eye_r * 0.55, rl.Color(10, 10, 10, 220))
+                         eye_r * 0.5, rl.Color(10, 10, 10, 210))
+        # tiny specular highlight
+        rl.draw_circle_v(
+            rl.Vector2(eye_x - facing * eye_r * 0.15, eye_y - eye_r * 0.25),
+            eye_r * 0.2, rl.Color(255, 255, 255, 180),
+        )
 
 
 def _make_fish(w: int, h: int, index: int) -> _Fish:
