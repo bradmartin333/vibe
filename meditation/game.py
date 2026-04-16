@@ -98,40 +98,40 @@ def run() -> None:
         rl.begin_drawing()
         rl.clear_background(grey(6))
 
-        # 1. Atmosphere particles / shooting stars
+        # Atmosphere particles and shooting stars
         atmosphere.draw_particles()
 
-        # 1.2 Constellation lines between nearby particles
+        # Constellation lines between nearby particles
         atmosphere.draw_constellations(figure.flow)
 
-        # 1.5 Fleeting anomalies (between particles and mandala)
+        # Fleeting anomalies
         anomalies.draw()
 
-        # 1.7 Fireflies
+        # Fireflies
         atmosphere.draw_fireflies()
 
-        # 1.8 Fish swimming across
+        # Fish swimming across
         fish.draw()
 
-        # 2. Sacred geometry mandala (breathes + acts as the main visual)
+        # Sacred geometry mandala
         sacred.draw(figure.x, figure.y, breathing.breath_t)
 
-        # 2.5 Breath motes from hands
+        # Breath motes from hands
         motes.draw()
 
-        # 2.6 Spacebar effects
+        # Spacebar effects
         spacebar_fx.draw()
 
-        # 3. Ghost trail (behind the figure)
+        # Ghost trail
         figure.draw_ghost_trail()
 
-        # 4. Stick figure
+        # Stick figure
         figure.draw(breath_t=breathing.breath_t)
 
-        # 5. Breathing prompt
+        # Breathing prompt
         breathing.draw_prompt(w, h)
 
-        # 7. Intro hint (fades out)
+        # Intro hint (fades out)
         if intro_timer > 0.0:
             fade: float = min(1.0, intro_timer / 2.0)
             hint: str = "good meditation is good, bad meditation is good"
