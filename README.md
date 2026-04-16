@@ -7,3 +7,9 @@ sit with a wobbly stick figure and watch the liminal space come alive around you
 ```
 uv run python main.py
 ```
+
+## controls
+
+- arrow keys
+- spacebar
+- left click (sometimes)
