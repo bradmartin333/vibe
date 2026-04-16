@@ -10,6 +10,7 @@ from meditation.colors import grey
 from meditation.figure import StickFigure
 from meditation.fish import FishSchool
 from meditation.sacred import SacredGeometry
+from meditation.spacebar import SpacebarEffects
 
 INIT_W: int = 800
 INIT_H: int = 600
@@ -34,6 +35,7 @@ def run() -> None:
     anomalies: Anomalies = Anomalies()
     motes: BreathMotes = BreathMotes()
     fish: FishSchool = FishSchool(INIT_W, INIT_H)
+    spacebar_fx: SpacebarEffects = SpacebarEffects()
 
     intro_timer: float = 6.0  # seconds to display the hint text
 
@@ -78,6 +80,11 @@ def run() -> None:
             mp: rl.Vector2 = rl.get_mouse_position()
             fish.handle_click(mp.x, mp.y)
 
+        # Spacebar random effects
+        spacebar_fx.update(dt)
+        if rl.is_key_pressed(rl.KEY_SPACE):
+            spacebar_fx.trigger(figure.x, figure.y)
+
         # Wind particles in the opposite direction of figure movement
         atmosphere.set_wind(-figure.vx, -figure.vy)
 
@@ -112,6 +119,9 @@ def run() -> None:
         # 2.5 Breath motes from hands
         motes.draw()
 
+        # 2.6 Spacebar effects
+        spacebar_fx.draw()
+
         # 3. Ghost trail (behind the figure)
         figure.draw_ghost_trail()
 
@@ -124,7 +134,7 @@ def run() -> None:
         # 7. Intro hint (fades out)
         if intro_timer > 0.0:
             fade: float = min(1.0, intro_timer / 2.0)
-            hint: str = "move with arrow keys"
+            hint: str = "good meditation is good, bad meditation is good"
             fs: int = 18
             tw: int = rl.measure_text(hint, fs)
             rl.draw_text(
