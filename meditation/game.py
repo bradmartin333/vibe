@@ -8,6 +8,7 @@ from meditation.breath_motes import BreathMotes
 from meditation.breathing import BreathingGuide
 from meditation.colors import grey
 from meditation.figure import StickFigure
+from meditation.fish import FishSchool
 from meditation.sacred import SacredGeometry
 
 INIT_W: int = 800
@@ -32,6 +33,7 @@ def run() -> None:
     sacred: SacredGeometry = SacredGeometry()
     anomalies: Anomalies = Anomalies()
     motes: BreathMotes = BreathMotes()
+    fish: FishSchool = FishSchool(INIT_W, INIT_H)
 
     intro_timer: float = 6.0  # seconds to display the hint text
 
@@ -70,6 +72,12 @@ def run() -> None:
             flow=figure.flow,
         )
 
+        # Fish
+        fish.update(dt, w, h)
+        if rl.is_mouse_button_pressed(rl.MOUSE_BUTTON_LEFT):
+            mp: rl.Vector2 = rl.get_mouse_position()
+            fish.handle_click(mp.x, mp.y)
+
         # Wind particles in the opposite direction of figure movement
         atmosphere.set_wind(-figure.vx, -figure.vy)
 
@@ -94,6 +102,9 @@ def run() -> None:
 
         # 1.7 Fireflies
         atmosphere.draw_fireflies()
+
+        # 1.8 Fish swimming across
+        fish.draw()
 
         # 2. Sacred geometry mandala (breathes + acts as the main visual)
         sacred.draw(figure.x, figure.y, breathing.breath_t)
