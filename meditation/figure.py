@@ -220,9 +220,9 @@ class StickFigure:
     def _draw_wobbly_line(
         self, p1: rl.Vector2, p2: rl.Vector2, thickness: float, color: rl.Color
     ) -> None:
-        """Draw a slightly wobbly line between two world-space points."""
+        """Draw a wobbly line between two world-space points."""
         segments: int = 4
-        wobble_amount: float = 1.2
+        wobble_amount: float = 1.2 + abs(math.sin(self.time)) * 0.8
         pts: list[rl.Vector2] = [p1]
         for i in range(1, segments):
             t: float = i / segments

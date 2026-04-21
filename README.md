@@ -12,4 +12,5 @@ uv run python main.py
 
 - arrow keys
 - spacebar
+- esc
 - left click (sometimes)
