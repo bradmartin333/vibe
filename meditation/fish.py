@@ -2,7 +2,7 @@
 
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pyray as rl
 
@@ -36,8 +36,9 @@ class _Bubble:
         if self.alpha <= 0.0:
             return
         a: int = _clamp(int(self.alpha * 120))
-        color: rl.Color = hue_shift(time, speed=0.1, saturation=0.15,
-                                     brightness=0.85, alpha=a)
+        color: rl.Color = hue_shift(
+            time, speed=0.1, saturation=0.15, brightness=0.85, alpha=a
+        )
         pos: rl.Vector2 = rl.Vector2(self.x, self.y)
         rl.draw_circle_v(pos, self.radius, color)
         # small highlight
@@ -118,12 +119,15 @@ class _Fish:
         t: float = time + self.hue_offset
 
         # body color
-        body_color: rl.Color = hue_shift(t, speed=0.06, saturation=0.55,
-                                          brightness=0.65, alpha=200)
-        body_light: rl.Color = hue_shift(t, speed=0.06, saturation=0.35,
-                                          brightness=0.75, alpha=140)
-        fin_color: rl.Color = hue_shift(t + 1.5, speed=0.06, saturation=0.45,
-                                         brightness=0.50, alpha=160)
+        body_color: rl.Color = hue_shift(
+            t, speed=0.06, saturation=0.55, brightness=0.65, alpha=200
+        )
+        body_light: rl.Color = hue_shift(
+            t, speed=0.06, saturation=0.35, brightness=0.75, alpha=140
+        )
+        fin_color: rl.Color = hue_shift(
+            t + 1.5, speed=0.06, saturation=0.45, brightness=0.50, alpha=160
+        )
 
         bl: float = self.body_length
         cx: float = self.x
@@ -154,8 +158,10 @@ class _Fish:
             y_off: float = layer * bl * 0.06
             col: rl.Color = body_light if layer == 0 else body_color
             rl.draw_ellipse(
-                int(cx), int(cy + y_off),
-                bl * shrink, bl * 0.48 * shrink,
+                int(cx),
+                int(cy + y_off),
+                bl * shrink,
+                bl * 0.48 * shrink,
                 col,
             )
 
@@ -164,7 +170,8 @@ class _Fish:
             rl.draw_line_ex(
                 rl.Vector2(body_pts[i][0], body_pts[i][1]),
                 rl.Vector2(body_pts[i + 1][0], body_pts[i + 1][1]),
-                1.2, body_color,
+                1.2,
+                body_color,
             )
 
         # -- tail (smooth fan of curved lines) -- #
@@ -183,9 +190,13 @@ class _Fish:
             p1: rl.Vector2 = rl.Vector2(mid_x, mid_y)
             p2: rl.Vector2 = rl.Vector2(tip_x, tip_y)
             ray_alpha: int = _clamp(int(160 - abs(frac) * 120))
-            ray_col: rl.Color = hue_shift(t + 1.5 + frac, speed=0.06,
-                                           saturation=0.45, brightness=0.50,
-                                           alpha=ray_alpha)
+            ray_col: rl.Color = hue_shift(
+                t + 1.5 + frac,
+                speed=0.06,
+                saturation=0.45,
+                brightness=0.50,
+                alpha=ray_alpha,
+            )
             rl.draw_line_ex(p0, p1, 1.5, ray_col)
             rl.draw_line_ex(p1, p2, 1.0, ray_col)
 
@@ -202,13 +213,15 @@ class _Fish:
             rl.draw_line_ex(
                 rl.Vector2(fx1, cy - bl * 0.45 - h1),
                 rl.Vector2(fx2, cy - bl * 0.45 - h2),
-                1.5, fin_color,
+                1.5,
+                fin_color,
             )
         # connect fin base to body
         rl.draw_line_ex(
             rl.Vector2(cx + facing * bl * -0.1, cy - bl * 0.45),
             rl.Vector2(cx + facing * bl * 0.5, cy - bl * 0.45),
-            1.0, fin_color,
+            1.0,
+            fin_color,
         )
 
         # -- pectoral fin (small curved line on belly) -- #
@@ -223,7 +236,8 @@ class _Fish:
             rl.draw_line_ex(
                 rl.Vector2(px1, cy + bl * 0.3 + ph1),
                 rl.Vector2(px2, cy + bl * 0.3 + ph2),
-                1.0, fin_color,
+                1.0,
+                fin_color,
             )
 
         # -- eye -- #
@@ -231,16 +245,20 @@ class _Fish:
         eye_y: float = cy - bl * 0.08
         eye_r: float = bl * 0.13
         # soft glow around eye
-        rl.draw_circle_v(rl.Vector2(eye_x, eye_y), eye_r * 1.5,
-                         rl.Color(255, 255, 255, 40))
-        rl.draw_circle_v(rl.Vector2(eye_x, eye_y), eye_r,
-                         rl.Color(255, 255, 255, 200))
-        rl.draw_circle_v(rl.Vector2(eye_x - facing * eye_r * 0.3, eye_y),
-                         eye_r * 0.5, rl.Color(10, 10, 10, 210))
+        rl.draw_circle_v(
+            rl.Vector2(eye_x, eye_y), eye_r * 1.5, rl.Color(255, 255, 255, 40)
+        )
+        rl.draw_circle_v(rl.Vector2(eye_x, eye_y), eye_r, rl.Color(255, 255, 255, 200))
+        rl.draw_circle_v(
+            rl.Vector2(eye_x - facing * eye_r * 0.3, eye_y),
+            eye_r * 0.5,
+            rl.Color(10, 10, 10, 210),
+        )
         # tiny specular highlight
         rl.draw_circle_v(
             rl.Vector2(eye_x - facing * eye_r * 0.15, eye_y - eye_r * 0.25),
-            eye_r * 0.2, rl.Color(255, 255, 255, 180),
+            eye_r * 0.2,
+            rl.Color(255, 255, 255, 180),
         )
 
 
@@ -278,8 +296,7 @@ class FishSchool:
         """Create the initial fish school."""
         self._time: float = 0.0
         self._fish: list[_Fish] = [
-            _make_fish(screen_w, screen_h, i)
-            for i in range(self.NUM_FISH)
+            _make_fish(screen_w, screen_h, i) for i in range(self.NUM_FISH)
         ]
         self._bubbles: list[_Bubble] = []
 

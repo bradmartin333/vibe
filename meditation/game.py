@@ -55,9 +55,11 @@ def run() -> None:
             0.0,
             min(
                 1.0,
-                (breathing.cycles_completed
-                 - breathing.FADE_AFTER_CYCLES
-                 - breathing.FADE_OVER_CYCLES)
+                (
+                    breathing.cycles_completed
+                    - breathing.FADE_AFTER_CYCLES
+                    - breathing.FADE_OVER_CYCLES
+                )
                 / 6.0,  # reach full intensity over ~6 more cycles
             ),
         )
@@ -67,8 +69,10 @@ def run() -> None:
         lh, rh = figure.hand_positions()
         motes.update(
             dt,
-            left_hand_x=lh.x, left_hand_y=lh.y,
-            right_hand_x=rh.x, right_hand_y=rh.y,
+            left_hand_x=lh.x,
+            left_hand_y=lh.y,
+            right_hand_x=rh.x,
+            right_hand_y=rh.y,
             breath_t=breathing.breath_t,
             is_inhaling=breathing.is_inhaling,
             flow=figure.flow,

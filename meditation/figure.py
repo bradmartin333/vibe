@@ -8,7 +8,7 @@ from enum import Enum, auto
 
 import pyray as rl
 
-from meditation.colors import GLOW, grey, trippy
+from meditation.colors import GLOW, trippy
 
 
 class Pose(Enum):
@@ -26,60 +26,60 @@ class Pose(Enum):
 _POSE_OFFSETS: dict[Pose, list[tuple[float, float]]] = {
     Pose.MEDITATE: [(0, 0)] * 12,
     Pose.LEAN_LEFT: [
-        (-3, -1),   # HEAD
-        (-2, 0),    # NECK
-        (-3, 1),    # SHOULDER
-        (0, 0),     # HIP
-        (-6, -6),   # L_ELBOW  — arm extends left
+        (-3, -1),  # HEAD
+        (-2, 0),  # NECK
+        (-3, 1),  # SHOULDER
+        (0, 0),  # HIP
+        (-6, -6),  # L_ELBOW  — arm extends left
         (-10, -2),  # L_HAND
-        (4, -8),    # R_ELBOW  — arm tucks in
-        (6, -3),    # R_HAND
-        (-6, -2),   # L_KNEE   — legs shift with lean
-        (-4, -1),   # L_FOOT
-        (6, 2),     # R_KNEE
-        (4, 3),     # R_FOOT
+        (4, -8),  # R_ELBOW  — arm tucks in
+        (6, -3),  # R_HAND
+        (-6, -2),  # L_KNEE   — legs shift with lean
+        (-4, -1),  # L_FOOT
+        (6, 2),  # R_KNEE
+        (4, 3),  # R_FOOT
     ],
     Pose.LEAN_RIGHT: [
-        (3, -1),    # HEAD
-        (2, 0),     # NECK
-        (3, 1),     # SHOULDER
-        (0, 0),     # HIP
-        (-4, -8),   # L_ELBOW  — arm tucks in
-        (-6, -3),   # L_HAND
-        (6, -6),    # R_ELBOW  — arm extends right
-        (10, -2),   # R_HAND
-        (-6, 2),    # L_KNEE   — legs shift with lean
-        (-4, 3),    # L_FOOT
-        (6, -2),    # R_KNEE
-        (4, -1),    # R_FOOT
+        (3, -1),  # HEAD
+        (2, 0),  # NECK
+        (3, 1),  # SHOULDER
+        (0, 0),  # HIP
+        (-4, -8),  # L_ELBOW  — arm tucks in
+        (-6, -3),  # L_HAND
+        (6, -6),  # R_ELBOW  — arm extends right
+        (10, -2),  # R_HAND
+        (-6, 2),  # L_KNEE   — legs shift with lean
+        (-4, 3),  # L_FOOT
+        (6, -2),  # R_KNEE
+        (4, -1),  # R_FOOT
     ],
     Pose.REACH_UP: [
-        (0, -4),    # HEAD   — lifted
-        (0, -3),    # NECK
-        (0, -2),    # SHOULDER
-        (0, 0),     # HIP
+        (0, -4),  # HEAD   — lifted
+        (0, -3),  # NECK
+        (0, -2),  # SHOULDER
+        (0, 0),  # HIP
         (-8, -14),  # L_ELBOW — arms reaching up
         (-4, -20),  # L_HAND
-        (8, -14),   # R_ELBOW
-        (4, -20),   # R_HAND
-        (-4, 3),    # L_KNEE  — legs press down to ground
-        (-2, 5),    # L_FOOT
-        (4, 3),     # R_KNEE
-        (2, 5),     # R_FOOT
+        (8, -14),  # R_ELBOW
+        (4, -20),  # R_HAND
+        (-4, 3),  # L_KNEE  — legs press down to ground
+        (-2, 5),  # L_FOOT
+        (4, 3),  # R_KNEE
+        (2, 5),  # R_FOOT
     ],
     Pose.PRESS_DOWN: [
-        (0, 3),     # HEAD   — lowered
-        (0, 2),     # NECK
-        (0, 2),     # SHOULDER
-        (0, 0),     # HIP
-        (-10, 4),   # L_ELBOW — arms pressing down/out
-        (-14, 8),   # L_HAND
-        (10, 4),    # R_ELBOW
-        (14, 8),    # R_HAND
-        (-8, -3),   # L_KNEE  — legs tuck up slightly
-        (-5, -5),   # L_FOOT
-        (8, -3),    # R_KNEE
-        (5, -5),    # R_FOOT
+        (0, 3),  # HEAD   — lowered
+        (0, 2),  # NECK
+        (0, 2),  # SHOULDER
+        (0, 0),  # HIP
+        (-10, 4),  # L_ELBOW — arms pressing down/out
+        (-14, 8),  # L_HAND
+        (10, 4),  # R_ELBOW
+        (14, 8),  # R_HAND
+        (-8, -3),  # L_KNEE  — legs tuck up slightly
+        (-5, -5),  # L_FOOT
+        (8, -3),  # R_KNEE
+        (5, -5),  # R_FOOT
     ],
 }
 
@@ -139,6 +139,10 @@ class StickFigure:
         self.scale: float = 1.0
         self.color: rl.Color = GLOW
         self.flow: float = 0.0  # 0..1 stillness/flow level
+        self.dt_multiplier: float = 1.0  # multiplier for dt (1-10)
+        self.dt_multiplier_dir: int = 1  # direction to change multiplier (1 or -1)
+        self.dt_multiplier_max: float = 50.0
+        self.t_key_timer: float = 0.0  # timer for 't' key hold-down rate limiting
 
         # Pose blending state
         self._base_rest: list[tuple[float, float]] = []  # filled after joints init
@@ -148,18 +152,18 @@ class StickFigure:
 
         # Build skeleton — positions are in local space relative to hip
         self.joints: list[Joint] = [
-            Joint(0, -52, mass=1.5),       # HEAD
-            Joint(0, -40, mass=0.8),       # NECK
-            Joint(0, -35, mass=1.2),       # SHOULDER
-            Joint(0, 0, mass=2.0),         # HIP (origin)
-            Joint(-16, -18, mass=0.6),     # L_ELBOW
-            Joint(-24, 0, mass=0.5),       # L_HAND
-            Joint(16, -18, mass=0.6),      # R_ELBOW
-            Joint(24, 0, mass=0.5),        # R_HAND
-            Joint(-22, 10, mass=0.8),      # L_KNEE
-            Joint(-8, 18, mass=0.5),       # L_FOOT
-            Joint(22, 10, mass=0.8),       # R_KNEE
-            Joint(8, 18, mass=0.5),        # R_FOOT
+            Joint(0, -52, mass=1.5),  # HEAD
+            Joint(0, -40, mass=0.8),  # NECK
+            Joint(0, -35, mass=1.2),  # SHOULDER
+            Joint(0, 0, mass=2.0),  # HIP (origin)
+            Joint(-16, -18, mass=0.6),  # L_ELBOW
+            Joint(-24, 0, mass=0.5),  # L_HAND
+            Joint(16, -18, mass=0.6),  # R_ELBOW
+            Joint(24, 0, mass=0.5),  # R_HAND
+            Joint(-22, 10, mass=0.8),  # L_KNEE
+            Joint(-8, 18, mass=0.5),  # L_FOOT
+            Joint(22, 10, mass=0.8),  # R_KNEE
+            Joint(8, 18, mass=0.5),  # R_FOOT
         ]
 
         # Bones: (joint_a, joint_b, stiffness)
@@ -235,7 +239,9 @@ class StickFigure:
             if length > 0.1:
                 nx: float = -dy / length
                 ny: float = dx / length
-                offset: float = math.sin(t * math.pi * 2.3 + self.time * 0.5) * wobble_amount
+                offset: float = (
+                    math.sin(t * math.pi * 2.3 + self.time * 0.5) * wobble_amount
+                )
                 mx += nx * offset
                 my += ny * offset
             pts.append(rl.Vector2(mx, my))
@@ -322,7 +328,7 @@ class StickFigure:
 
     def update(self, dt: float, screen_w: int, screen_h: int) -> None:
         """Advance whole-body and joint physics one frame."""
-        self.time += dt
+        self.time += dt * self.dt_multiplier
 
         # Organic drift from layered sine waves
         drift_x: float = (
@@ -372,6 +378,21 @@ class StickFigure:
             self.active_pose = Pose.PRESS_DOWN
         else:
             self.active_pose = Pose.MEDITATE
+
+        # Handle 't' key: hold to increment/decrement dt multiplier with rate limiting
+        self.t_key_timer -= dt
+        if rl.is_key_down(rl.KEY_T) and self.t_key_timer <= 0:
+            self.t_key_timer = 0.1  # 100ms between increments when holding
+            if self.dt_multiplier_dir == 1:
+                self.dt_multiplier += 1.0
+                if self.dt_multiplier >= self.dt_multiplier_max:
+                    self.dt_multiplier = self.dt_multiplier_max
+                    self.dt_multiplier_dir = -1
+            else:
+                self.dt_multiplier -= 1.0
+                if self.dt_multiplier <= 1.0:
+                    self.dt_multiplier = 1.0
+                    self.dt_multiplier_dir = 1
 
         # Smoothly blend joint rest positions toward the active pose
         self._blend_pose(dt)
@@ -429,7 +450,9 @@ class StickFigure:
                 pa: rl.Vector2 = rl.Vector2(snapshot[a].x + ox, snapshot[a].y + oy)
                 pb: rl.Vector2 = rl.Vector2(snapshot[b].x + ox, snapshot[b].y + oy)
                 rl.draw_line_ex(pa, pb, 1.0, col)
-            head: rl.Vector2 = rl.Vector2(snapshot[self.HEAD].x + ox, snapshot[self.HEAD].y + oy)
+            head: rl.Vector2 = rl.Vector2(
+                snapshot[self.HEAD].x + ox, snapshot[self.HEAD].y + oy
+            )
             rl.draw_circle_lines_v(head, 10.0 * self.scale, col)
 
     def draw_ghost_trail(self) -> None:

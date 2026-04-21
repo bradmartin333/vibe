@@ -23,3 +23,5 @@
 - and any questions you may have before you start coding
 - write clean, readable, and maintainable code
 - use the ASCII character U+002d "-" instead of U+2013 "–" in your code to avoid any confusion or issues with character encoding
+- run `uv run ruff format .` to format after editing
+- run `uv run ruff check .` to check for linting issues

@@ -86,8 +86,7 @@ class SacredGeometry:
         pts: list[rl.Vector2] = []
         for i in range(3):
             a: float = rotation + (math.tau / 3) * i
-            pts.append(rl.Vector2(cx + math.cos(a) * radius,
-                                  cy + math.sin(a) * radius))
+            pts.append(rl.Vector2(cx + math.cos(a) * radius, cy + math.sin(a) * radius))
         for i in range(3):
             rl.draw_line_ex(pts[i], pts[(i + 1) % 3], thickness, color)
 
@@ -140,8 +139,9 @@ class SacredGeometry:
 
         # -- central seed ------------------------------------------------ #
         seed_r: float = 18.0 * scale
-        seed_col: rl.Color = trippy(self.time, layer=0,
-                                    alpha=max(0, min(255, int(base_alpha * 0.9))))
+        seed_col: rl.Color = trippy(
+            self.time, layer=0, alpha=max(0, min(255, int(base_alpha * 0.9)))
+        )
         self._ring(cx, cy, seed_r, seed_col, thickness=1.2)
 
         # Soft glow behind center
@@ -195,8 +195,10 @@ class SacredGeometry:
             sx2: float = cx + math.cos(sa) * wheel_r
             sy2: float = cy + math.sin(sa) * wheel_r
             rl.draw_line_ex(
-                rl.Vector2(sx1, sy1), rl.Vector2(sx2, sy2),
-                0.8, wheel_col,
+                rl.Vector2(sx1, sy1),
+                rl.Vector2(sx2, sy2),
+                0.8,
+                wheel_col,
             )
 
         # -- outermost breath ring — pulses with breath ------------------ #

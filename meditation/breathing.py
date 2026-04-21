@@ -39,8 +39,7 @@ class BreathingGuide:
     def breath_t(self) -> float:
         """Smooth 0 → 1 → 0 value (0 = exhaled, 1 = fully inhaled)."""
         return (
-            math.sin(self.time * math.pi * 2.0 / self.CYCLE - math.pi / 2)
-            + 1.0
+            math.sin(self.time * math.pi * 2.0 / self.CYCLE - math.pi / 2) + 1.0
         ) / 2.0
 
     # -- update / draw ---------------------------------------------------- #

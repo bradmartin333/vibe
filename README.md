@@ -10,7 +10,8 @@ uv run python main.py
 
 ## controls
 
-- arrow keys
-- spacebar
-- esc
-- left click (sometimes)
+- arrow keys to move
+- spacebar for more effects
+- esc to exit
+- left click fish for bubbles
+- `t` key to cycle wobbliness

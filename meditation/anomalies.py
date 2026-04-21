@@ -2,7 +2,7 @@
 
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pyray as rl
 
@@ -12,6 +12,7 @@ from meditation.colors import _clamp, grey, trippy
 # ---------------------------------------------------------------------------
 # Individual anomaly types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class _GlyphFlash:
@@ -143,8 +144,20 @@ class _GhostLine:
 # ---------------------------------------------------------------------------
 
 _GLYPHS: list[str] = [
-    "*", "+", "~", "o", ".", ":", "|", "/", "\\",
-    "^", "=", "#", "%", "&",
+    "*",
+    "+",
+    "~",
+    "o",
+    ".",
+    ":",
+    "|",
+    "/",
+    "\\",
+    "^",
+    "=",
+    "#",
+    "%",
+    "&",
 ]
 
 
@@ -163,8 +176,7 @@ class Anomalies:
 
     # -- public ----------------------------------------------------------- #
 
-    def update(self, dt: float, intensity: float,
-               screen_w: int, screen_h: int) -> None:
+    def update(self, dt: float, intensity: float, screen_w: int, screen_h: int) -> None:
         """Spawn new anomalies based on *intensity* and age existing ones."""
         self.time += dt
         self._active = [a for a in self._active if a.update(dt)]  # type: ignore[union-attr]
@@ -225,9 +237,13 @@ class Anomalies:
             dur: float = random.uniform(2.0, 5.0)
             self._active.append(
                 _ShadowDrift(
-                    x=sx, y=sy, vx=vx, vy=vy,
+                    x=sx,
+                    y=sy,
+                    vx=vx,
+                    vy=vy,
                     radius=random.uniform(8, 30 + intensity * 25),
-                    life=dur, max_life=dur,
+                    life=dur,
+                    max_life=dur,
                 )
             )
         elif kind == 2:
@@ -240,7 +256,8 @@ class Anomalies:
                     radius=random.uniform(10, 50 + intensity * 30),
                     sides=random.choice([3, 4, 5, 6, 7, 8]),
                     angle=random.uniform(0, 360),
-                    life=dur2, max_life=dur2,
+                    life=dur2,
+                    max_life=dur2,
                     spin_speed=random.uniform(20, 90) * random.choice([-1, 1]),
                 )
             )
@@ -257,6 +274,7 @@ class Anomalies:
                     y1=cy - math.sin(angle) * length * 0.5,
                     x2=cx + math.cos(angle) * length * 0.5,
                     y2=cy + math.sin(angle) * length * 0.5,
-                    life=dur3, max_life=dur3,
+                    life=dur3,
+                    max_life=dur3,
                 )
             )

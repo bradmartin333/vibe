@@ -5,7 +5,7 @@ import random
 
 import pyray as rl
 
-from meditation.colors import _clamp, grey, hue_shift, trippy
+from meditation.colors import _clamp, hue_shift, trippy
 
 
 def _lerp(a: float, b: float, t: float) -> float:
@@ -42,8 +42,12 @@ class _Ripple:
         col: rl.Color = trippy(self.color_time + t * 2.0, layer=1, alpha=alpha)
         rl.draw_ring(
             rl.Vector2(self.x, self.y),
-            max(0.0, radius - 2.0), radius,
-            0, 360, 48, col,
+            max(0.0, radius - 2.0),
+            radius,
+            0,
+            360,
+            48,
+            col,
         )
 
 
@@ -81,23 +85,40 @@ class _Spark:
         alpha: int = _clamp(int(t * 200))
         if alpha <= 0:
             return
-        col: rl.Color = hue_shift(self.color_time + (1.0 - t) * 3.0,
-                                   speed=0.12, saturation=0.5,
-                                   brightness=0.7, alpha=alpha)
+        col: rl.Color = hue_shift(
+            self.color_time + (1.0 - t) * 3.0,
+            speed=0.12,
+            saturation=0.5,
+            brightness=0.7,
+            alpha=alpha,
+        )
         pos: rl.Vector2 = rl.Vector2(self.x, self.y)
         rl.draw_circle_v(pos, self.size * t + 1.0, col)
         glow_a: int = _clamp(int(alpha * 0.3))
-        rl.draw_circle_v(pos, (self.size * t + 1.0) * 2.5,
-                         rl.Color(col.r, col.g, col.b, glow_a))
+        rl.draw_circle_v(
+            pos, (self.size * t + 1.0) * 2.5, rl.Color(col.r, col.g, col.b, glow_a)
+        )
 
 
 class _FloatingGlyph:
     """A symbol that drifts upward and fades out."""
 
     GLYPHS: list[str] = [
-        "\u2728", "\u2736", "\u00b7", "\u2022", "\u25cb",
-        "\u25e6", "\u2661", "\u2662", "\u266a", "\u221e",
-        "\u2609", "\u263d", "\u2606", "\u2727", "\u00a4",
+        "\u2728",
+        "\u2736",
+        "\u00b7",
+        "\u2022",
+        "\u25cb",
+        "\u25e6",
+        "\u2661",
+        "\u2662",
+        "\u266a",
+        "\u221e",
+        "\u2609",
+        "\u263d",
+        "\u2606",
+        "\u2727",
+        "\u00a4",
     ]
 
     def __init__(self, x: float, y: float, color_time: float) -> None:
@@ -131,8 +152,7 @@ class _FloatingGlyph:
             return
         col: rl.Color = trippy(self.color_time + (1.0 - t), layer=3, alpha=alpha)
         tw: int = rl.measure_text(self.glyph, self.font_size)
-        rl.draw_text(self.glyph, int(self.x - tw / 2), int(self.y),
-                     self.font_size, col)
+        rl.draw_text(self.glyph, int(self.x - tw / 2), int(self.y), self.font_size, col)
 
 
 class _PulseRing:
@@ -167,8 +187,12 @@ class _PulseRing:
         col: rl.Color = trippy(self.color_time + self.age, layer=5, alpha=alpha)
         rl.draw_ring(
             rl.Vector2(self.x, self.y),
-            max(0.0, radius - 1.5), radius,
-            0, 360, 48, col,
+            max(0.0, radius - 1.5),
+            radius,
+            0,
+            360,
+            48,
+            col,
         )
 
 
@@ -199,9 +223,13 @@ class _WaveDistortion:
         alpha: int = _clamp(int(fade * 100))
         if alpha <= 0:
             return
-        col: rl.Color = hue_shift(self.color_time + self.age * 0.5,
-                                   speed=0.15, saturation=0.4,
-                                   brightness=0.6, alpha=alpha)
+        col: rl.Color = hue_shift(
+            self.color_time + self.age * 0.5,
+            speed=0.15,
+            saturation=0.4,
+            brightness=0.6,
+            alpha=alpha,
+        )
         segments: int = 40
         reach: float = 60.0 + t * 160.0
         for w in range(self.wave_count):
@@ -210,9 +238,15 @@ class _WaveDistortion:
             for s in range(segments + 1):
                 frac: float = s / segments
                 dist: float = frac * reach
-                wave_offset: float = math.sin(frac * math.pi * 4.0 - self.age * 6.0) * (12.0 * fade)
-                dx: float = math.cos(base_angle) * dist - math.sin(base_angle) * wave_offset
-                dy: float = math.sin(base_angle) * dist + math.cos(base_angle) * wave_offset
+                wave_offset: float = math.sin(frac * math.pi * 4.0 - self.age * 6.0) * (
+                    12.0 * fade
+                )
+                dx: float = (
+                    math.cos(base_angle) * dist - math.sin(base_angle) * wave_offset
+                )
+                dy: float = (
+                    math.sin(base_angle) * dist + math.cos(base_angle) * wave_offset
+                )
                 pts.append(rl.Vector2(self.x + dx, self.y + dy))
             for i in range(len(pts) - 1):
                 rl.draw_line_ex(pts[i], pts[i + 1], 1.2, col)
@@ -273,8 +307,13 @@ class SpacebarEffects:
     def update(self, dt: float) -> None:
         """Advance all active effects."""
         self._time += dt
-        for obj_list in (self._ripples, self._sparks, self._glyphs,
-                         self._pulses, self._waves):
+        for obj_list in (
+            self._ripples,
+            self._sparks,
+            self._glyphs,
+            self._pulses,
+            self._waves,
+        ):
             for obj in obj_list:
                 obj.update(dt)
         self._ripples = [r for r in self._ripples if r.alive()]

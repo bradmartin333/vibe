@@ -142,8 +142,9 @@ class Atmosphere:
                 )
             )
 
-    def update(self, dt: float, screen_w: int, screen_h: int,
-               flow: float = 0.0) -> None:
+    def update(
+        self, dt: float, screen_w: int, screen_h: int, flow: float = 0.0
+    ) -> None:
         """Advance every particle one frame."""
         self.time += dt
         self.screen_w = screen_w
@@ -176,17 +177,19 @@ class Atmosphere:
         if len(self._fireflies) < target_count and self._firefly_timer <= 0:
             self._firefly_timer = random.uniform(1.5, 4.0)
             life: float = random.uniform(3.0, 7.0)
-            self._fireflies.append({
-                "x": random.uniform(60, w - 60),
-                "y": random.uniform(60, h - 60),
-                "vx": random.uniform(-8, 8),
-                "vy": random.uniform(-8, 8),
-                "phase": random.uniform(0, math.tau),
-                "life": life,
-                "max_life": life,
-                "size": random.uniform(1.5, 3.5),
-                "hue_offset": random.uniform(0, 10),
-            })
+            self._fireflies.append(
+                {
+                    "x": random.uniform(60, w - 60),
+                    "y": random.uniform(60, h - 60),
+                    "vx": random.uniform(-8, 8),
+                    "vy": random.uniform(-8, 8),
+                    "phase": random.uniform(0, math.tau),
+                    "life": life,
+                    "max_life": life,
+                    "size": random.uniform(1.5, 3.5),
+                    "hue_offset": random.uniform(0, 10),
+                }
+            )
 
         # Update
         alive: list[dict[str, float]] = []
