@@ -376,10 +376,7 @@ class StickFigure:
         # Smoothly blend joint rest positions toward the active pose
         self._blend_pose(dt)
 
-        # Soft spring pulling toward center
-        spring: float = 0.4
-        self.vx += (self.home_x - self.x) * spring * dt
-        self.vy += (self.home_y - self.y) * spring * dt
+        # Angular spring pulling rotation back to upright
         self.angular_vel += (0.0 - self.angle) * 0.6 * dt
 
         # Frame-rate-independent damping
@@ -394,10 +391,9 @@ class StickFigure:
         self.y += self.vy * dt
         self.angle += self.angular_vel * dt
 
-        # Keep within comfortable bounds
-        margin: float = 150.0
-        self.x = max(margin, min(screen_w - margin, self.x))
-        self.y = max(margin, min(screen_h - margin, self.y))
+        # Wrap around screen edges
+        self.x = self.x % screen_w
+        self.y = self.y % screen_h
         self.angle = max(-0.4, min(0.4, self.angle))
 
         # Compute flow: how close to center and how still the figure is
@@ -418,54 +414,76 @@ class StickFigure:
 
     # -- ghost trail ------------------------------------------------------ #
 
-    def draw_ghost_trail(self) -> None:
-        """Draw faded afterimages of the figure from recent snapshots.
-
-        Older ghosts are more transparent and slightly tinted with the
-        trippy color cycle, giving a dreamy motion-blur effect.
-        """
+    def _draw_ghost_at(self, ox: float, oy: float) -> None:
+        """Draw ghost trail snapshots shifted by (ox, oy)."""
         count: int = len(self._ghosts)
         if count < 2:
             return
-
         for gi, snapshot in enumerate(self._ghosts):
-            age: float = 1.0 - gi / count  # 1 = oldest, 0 = newest
+            age: float = 1.0 - gi / count
             alpha: int = max(0, min(255, int((1.0 - age) * 40)))
             if alpha <= 0:
                 continue
             col: rl.Color = trippy(self.time + age * 3.0, layer=gi % 8, alpha=alpha)
-
-            # Draw bones as thin lines from the snapshot
             for a, b, _ in self.bones:
-                rl.draw_line_ex(snapshot[a], snapshot[b], 1.0, col)
-
-            # Ghost head circle
-            head: rl.Vector2 = snapshot[self.HEAD]
+                pa: rl.Vector2 = rl.Vector2(snapshot[a].x + ox, snapshot[a].y + oy)
+                pb: rl.Vector2 = rl.Vector2(snapshot[b].x + ox, snapshot[b].y + oy)
+                rl.draw_line_ex(pa, pb, 1.0, col)
+            head: rl.Vector2 = rl.Vector2(snapshot[self.HEAD].x + ox, snapshot[self.HEAD].y + oy)
             rl.draw_circle_lines_v(head, 10.0 * self.scale, col)
+
+    def draw_ghost_trail(self) -> None:
+        """Draw faded afterimages of the figure from recent snapshots."""
+        self._draw_ghost_at(0.0, 0.0)
+
+    def draw_ghost_trail_wrapped(self, screen_w: int, screen_h: int) -> None:
+        """Draw ghost trail with edge wrapping."""
+        for ox, oy in self._wrap_offsets(screen_w, screen_h):
+            self._draw_ghost_at(ox, oy)
 
     # -- rendering -------------------------------------------------------- #
 
-    def draw(self, breath_t: float = 0.5) -> None:
-        """Draw the stick figure with physics-driven joints.
+    def _wrap_offsets(self, screen_w: int, screen_h: int) -> list[tuple[float, float]]:
+        """Return (dx, dy) draw offsets for edge wrapping.
 
-        Args:
-            breath_t: Breathing phase (0.0 = exhaled, 1.0 = inhaled).
+        Always includes (0, 0) for the primary draw. Additional offsets appear
+        when the figure is within *threshold* pixels of an edge, so the ghost
+        copy emerges from the opposite side simultaneously.
         """
-        dt: float = rl.get_frame_time()
-        self._update_joints(dt, breath_t)
+        threshold: float = 80.0
+        offsets: list[tuple[float, float]] = [(0.0, 0.0)]
+        dx: float = 0.0
+        dy: float = 0.0
+        if self.x < threshold:
+            dx = float(screen_w)
+        elif self.x > screen_w - threshold:
+            dx = -float(screen_w)
+        if self.y < threshold:
+            dy = float(screen_h)
+        elif self.y > screen_h - threshold:
+            dy = -float(screen_h)
+        if dx != 0.0:
+            offsets.append((dx, 0.0))
+        if dy != 0.0:
+            offsets.append((0.0, dy))
+        if dx != 0.0 and dy != 0.0:
+            offsets.append((dx, dy))
+        return offsets
 
+    def _render(self, breath_t: float) -> None:
+        """Render the figure at the current self.x / self.y position."""
         # Draw all bones
         # Spine
         self._draw_bone(self.HIP, self.SHOULDER)
         self._draw_bone(self.SHOULDER, self.NECK)
 
-        # Legs — crossed lotus
+        # Legs - crossed lotus
         self._draw_bone(self.HIP, self.L_KNEE)
         self._draw_bone(self.L_KNEE, self.L_FOOT)
         self._draw_bone(self.HIP, self.R_KNEE)
         self._draw_bone(self.R_KNEE, self.R_FOOT)
 
-        # Arms — resting on knees
+        # Arms - resting on knees
         self._draw_bone(self.SHOULDER, self.L_ELBOW)
         self._draw_bone(self.L_ELBOW, self.L_HAND)
         self._draw_bone(self.SHOULDER, self.R_ELBOW)
@@ -474,7 +492,7 @@ class StickFigure:
         # Neck to head base
         self._draw_bone(self.NECK, self.HEAD)
 
-        # Head — large circle (outline only)
+        # Head - large circle (outline only)
         head_pos: rl.Vector2 = self._joint_world(self.HEAD)
         head_radius: float = 11.0 * self.scale
 
@@ -496,3 +514,24 @@ class StickFigure:
                 head_pos.y + math.sin(a2) * r2,
             )
             rl.draw_line_ex(p1, p2, self.thickness, self.color)
+
+    def draw(self, breath_t: float = 0.5) -> None:
+        """Draw the stick figure with physics-driven joints."""
+        dt: float = rl.get_frame_time()
+        self._update_joints(dt, breath_t)
+        self._render(breath_t)
+
+    def draw_wrapped(self, breath_t: float, screen_w: int, screen_h: int) -> None:
+        """Draw the figure with edge wrapping.
+
+        Physics are stepped once; the figure is rendered at the primary
+        position plus any mirror positions needed near screen edges.
+        """
+        dt: float = rl.get_frame_time()
+        self._update_joints(dt, breath_t)
+        for ox, oy in self._wrap_offsets(screen_w, screen_h):
+            self.x += ox
+            self.y += oy
+            self._render(breath_t)
+            self.x -= ox
+            self.y -= oy

@@ -123,10 +123,10 @@ def run() -> None:
         spacebar_fx.draw()
 
         # Ghost trail
-        figure.draw_ghost_trail()
+        figure.draw_ghost_trail_wrapped(w, h)
 
         # Stick figure
-        figure.draw(breath_t=breathing.breath_t)
+        figure.draw_wrapped(breath_t=breathing.breath_t, screen_w=w, screen_h=h)
 
         # Breathing prompt
         breathing.draw_prompt(w, h)
