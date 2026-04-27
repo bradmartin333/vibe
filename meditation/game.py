@@ -10,6 +10,7 @@ from meditation.colors import grey
 from meditation.figure import StickFigure
 from meditation.fish import FishSchool
 from meditation.sacred import SacredGeometry
+from meditation.whale import WhalePod
 from meditation.spacebar import SpacebarEffects
 
 INIT_W: int = 800
@@ -35,6 +36,7 @@ def run() -> None:
     anomalies: Anomalies = Anomalies()
     motes: BreathMotes = BreathMotes()
     fish: FishSchool = FishSchool(INIT_W, INIT_H)
+    whales: WhalePod = WhalePod(INIT_W, INIT_H)
     spacebar_fx: SpacebarEffects = SpacebarEffects()
 
     intro_timer: float = 6.0  # seconds to display the hint text
@@ -80,9 +82,12 @@ def run() -> None:
 
         # Fish
         fish.update(dt, w, h)
+        # Whales
+        whales.update(dt, w, h)
         if rl.is_mouse_button_pressed(rl.MOUSE_BUTTON_LEFT):
             mp: rl.Vector2 = rl.get_mouse_position()
             fish.handle_click(mp.x, mp.y)
+            whales.handle_click(mp.x, mp.y)
 
         # Spacebar random effects
         spacebar_fx.update(dt)
@@ -113,6 +118,9 @@ def run() -> None:
 
         # Fireflies
         atmosphere.draw_fireflies()
+
+        # Whales drifting across (drawn before fish so fish appear in front)
+        whales.draw()
 
         # Fish swimming across
         fish.draw()
