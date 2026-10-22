@@ -30,8 +30,15 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     concurrency:
-      group: deploy-pythonanywhere
+      group: deploy-pages
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
@@ -41,9 +48,12 @@ jobs:
       - name: Build WebAssembly bundle with pygbag
         run: scripts/build_web.sh
 
-      - name: Deploy to PythonAnywhere
-        env:
-          PA_USERNAME: ${{ secrets.PA_USERNAME }}
-          PA_API_TOKEN: ${{ secrets.PA_API_TOKEN }}
-          PA_DOMAIN: ${{ secrets.PA_DOMAIN }}
-        run: uv run scripts/deploy_pythonanywhere.py build/vibe/build/web
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/vibe/build/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

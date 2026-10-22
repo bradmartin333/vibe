@@ -18,7 +18,7 @@ uv run python main.py
 
 ## web
 
-pushes to `main` build a WebAssembly version with [pygbag](https://pygame-web.github.io/) and publish it to PythonAnywhere (see `.github/workflows/ci.yml`)
+pushes to `main` build a WebAssembly version with [pygbag](https://pygame-web.github.io/) and publish it to GitHub Pages at https://bradmartin333.github.io/vibe/ (see `.github/workflows/ci.yml`)
 
 use the commands below to launch the web build locally at http://127.0.0.1:8000 (not `localhost` - on `localhost` the pygbag runtime looks for packages on a local dev server)
 
