@@ -19,7 +19,7 @@ Usage: ``uv run scripts/deploy_pythonanywhere.py build/vibe/build/web``
 
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import requests
@@ -59,11 +59,19 @@ def load_config() -> Config:
     if missing:
         sys.exit(f"missing environment variables: {', '.join(missing)}")
     return Config(
-        username=os.environ["PA_USERNAME"],
-        token=os.environ["PA_API_TOKEN"],
-        domain=os.environ["PA_DOMAIN"],
-        host=os.environ.get("PA_HOST") or "www.pythonanywhere.com",
+        username=os.environ["PA_USERNAME"].strip(),
+        token=os.environ["PA_API_TOKEN"].strip(),
+        domain=normalize_domain(os.environ["PA_DOMAIN"]),
+        host=normalize_domain(os.environ.get("PA_HOST") or "www.pythonanywhere.com"),
     )
+
+
+def normalize_domain(value: str) -> str:
+    """Reduce a domain or URL such as " https://Me.pythonanywhere.com/ " to its host."""
+    host: str = value.strip().lower()
+    for scheme in ("https://", "http://"):
+        host = host.removeprefix(scheme)
+    return host.split("/", 1)[0]
 
 
 def make_session(config: Config) -> requests.Session:
@@ -83,21 +91,30 @@ def check(response: requests.Response) -> requests.Response:
     return response
 
 
-def ensure_webapp(session: requests.Session, config: Config) -> None:
-    """Create the web app if it does not exist yet."""
-    url: str = f"{config.api_base}/webapps/{config.domain}/"
-    response: requests.Response = session.get(url, timeout=TIMEOUT_S)
-    if response.status_code == 404:
-        print(f"creating web app {config.domain}")
-        check(
-            session.post(
-                f"{config.api_base}/webapps/",
-                data={"domain_name": config.domain, "python_version": PYTHON_VERSION},
-                timeout=TIMEOUT_S,
-            )
+def ensure_webapp(session: requests.Session, config: Config) -> str:
+    """Return the web app's domain as PythonAnywhere spells it, creating it if missing."""
+    webapps: list[dict[str, object]] = check(
+        session.get(f"{config.api_base}/webapps/", timeout=TIMEOUT_S)
+    ).json()
+    existing: list[str] = [str(app["domain_name"]) for app in webapps]
+    for domain in existing:
+        if domain.lower() == config.domain:
+            print(f"using existing web app {domain}")
+            return domain
+
+    print(f"creating web app {config.domain}")
+    response: requests.Response = session.post(
+        f"{config.api_base}/webapps/",
+        data={"domain_name": config.domain, "python_version": PYTHON_VERSION},
+        timeout=TIMEOUT_S,
+    )
+    if not response.ok:
+        sys.exit(
+            f"could not create web app ({response.status_code}): {response.text}\n"
+            f"web apps on this account: {', '.join(existing) or 'none'} - "
+            "set PA_DOMAIN to one of these"
         )
-    else:
-        check(response)
+    return config.domain
 
 
 def upload_dir(session: requests.Session, config: Config, local_dir: Path) -> None:
@@ -158,7 +175,7 @@ def main() -> None:
 
     config: Config = load_config()
     session: requests.Session = make_session(config)
-    ensure_webapp(session, config)
+    config = replace(config, domain=ensure_webapp(session, config))
     upload_dir(session, config, local_dir)
     ensure_root_mapping(session, config)
     reload_webapp(session, config)
