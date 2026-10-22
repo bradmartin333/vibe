@@ -268,6 +268,61 @@ window.addEventListener(
             50% { opacity: 1; }
         }
 
+        /* shown on touch-only devices, above the loading text and the canvas */
+        #mobile-notice {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background-color: rgba(6, 6, 6, 0.92);
+            z-index: 1000000;
+            transition: opacity 0.3s ease;
+        }
+        #mobile-notice[hidden] { display: none; }
+        #mobile-notice.closing { opacity: 0; }
+
+        #mobile-notice .panel {
+            max-width: 320px;
+            padding: 24px;
+            border: 1px solid #464646;
+            border-radius: 8px;
+            background-color: #0c0c0c;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        #mobile-notice h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+            font-weight: normal;
+            letter-spacing: 0.3em;
+        }
+
+        #mobile-notice p {
+            margin: 0 0 20px;
+            font-size: 14px;
+            color: #828282;
+        }
+
+        #mobile-notice button {
+            font: inherit;
+            font-size: 14px;
+            letter-spacing: 0.1em;
+            color: var(--text);
+            background-color: transparent;
+            border: 1px solid var(--text);
+            border-radius: 4px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        #mobile-notice button:active { background-color: #1a1a1a; }
+        #mobile-notice button:focus-visible {
+            outline: 1px solid var(--dim);
+            outline-offset: 3px;
+        }
+
         div.emscripten { text-align: center; }
 
         /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
@@ -317,6 +372,19 @@ height="{{cookiecutter.height}}px"
 
     <div id="infobox">v i b e</div>
 
+    <div id="mobile-notice" role="alertdialog" aria-modal="true"
+        aria-labelledby="mobile-notice-title" aria-describedby="mobile-notice-text" hidden>
+        <div class="panel">
+            <h2 id="mobile-notice-title">best on desktop</h2>
+            <p id="mobile-notice-text">
+                vibe is designed to be run on a desktop with a keyboard.
+                on this device you can tap fish and whales, but you can't
+                move or trigger effects.
+            </p>
+            <button id="mobile-notice-ok" type="button">continue anyway</button>
+        </div>
+    </div>
+
     <div id=html></div>
 
     <div id="pyconsole">
@@ -329,6 +397,19 @@ height="{{cookiecutter.height}}px"
         // called by pygbag before any python is loaded
         pyconsole.hidden = debug_hidden
         transfer.hidden = debug_hidden
+    }
+
+    // touch-only devices (phones, tablets) have no keyboard for the controls,
+    // so warn once on load; the game keeps loading behind the notice
+    if (matchMedia("(hover: none) and (pointer: coarse)").matches) {
+        const notice = document.getElementById("mobile-notice")
+        const ok = document.getElementById("mobile-notice-ok")
+        notice.hidden = false
+        ok.focus()
+        ok.addEventListener("click", () => {
+            notice.classList.add("closing")
+            setTimeout(() => { notice.hidden = true }, 300)
+        })
     }
 
     </script>
