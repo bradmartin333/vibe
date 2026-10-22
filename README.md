@@ -10,6 +10,8 @@ uv run python main.py
 
 ## controls
 
+the `?` button in the top-left corner shows these in the game
+
 - arrow keys or WASD to move
 - spacebar for more effects
 - esc to exit (desktop only - close the tab on the web)
