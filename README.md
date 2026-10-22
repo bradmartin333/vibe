@@ -22,6 +22,8 @@ the `?` button in the top-left corner shows these in the game
 
 pushes to `main` build a WebAssembly version with [pygbag](https://pygame-web.github.io/) and publish it to GitHub Pages at https://bradmartin333.github.io/vibe/ (see `.github/workflows/ci.yml`)
 
+touch-only devices (phones, tablets) get a dismissible notice that vibe is designed to be run on desktop, since most controls need a keyboard
+
 use the commands below to launch the web build locally at http://127.0.0.1:8000 (not `localhost` - on `localhost` the pygbag runtime looks for packages on a local dev server)
 
 ```
