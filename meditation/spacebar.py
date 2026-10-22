@@ -5,6 +5,7 @@ import random
 
 import pyray as rl
 
+from meditation import text
 from meditation.colors import _clamp, hue_shift, trippy
 
 
@@ -151,8 +152,8 @@ class _FloatingGlyph:
         if alpha <= 0:
             return
         col: rl.Color = trippy(self.color_time + (1.0 - t), layer=3, alpha=alpha)
-        tw: int = rl.measure_text(self.glyph, self.font_size)
-        rl.draw_text(self.glyph, int(self.x - tw / 2), int(self.y), self.font_size, col)
+        tw: float = text.measure(self.glyph, self.font_size)
+        text.draw(self.glyph, self.x - tw / 2, self.y, self.font_size, col)
 
 
 class _PulseRing:

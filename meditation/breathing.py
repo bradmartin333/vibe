@@ -2,8 +2,7 @@
 
 import math
 
-import pyray as rl
-
+from meditation import text
 from meditation.colors import grey
 
 
@@ -69,15 +68,15 @@ class BreathingGuide:
         if fade <= 0.0:
             return
 
-        text: str = "breathe in  . . ." if self.is_inhaling else "breathe out  . . ."
+        prompt: str = "breathe in  . . ." if self.is_inhaling else "breathe out  . . ."
         font_size: int = 18
-        text_w: int = rl.measure_text(text, font_size)
-        x: int = (screen_w - text_w) // 2
-        y: int = screen_h - 55
+        text_w: float = text.measure(prompt, font_size)
+        x: float = (screen_w - text_w) / 2
+        y: float = screen_h - 55
 
         alpha: float = (
             0.55 + 0.45 * self.breath_t
             if self.is_inhaling
             else 0.55 + 0.45 * (1.0 - self.breath_t)
         )
-        rl.draw_text(text, x, y, font_size, grey(180, int(alpha * fade * 255)))
+        text.draw(prompt, x, y, font_size, grey(180, int(alpha * fade * 255)))

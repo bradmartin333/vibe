@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 import pyray as rl
 
+from meditation import text
 from meditation.colors import _clamp, grey, trippy
 
 
@@ -41,7 +42,7 @@ class _GlyphFlash:
         if a <= 0:
             return
         col: rl.Color = trippy(time + self.rotation, layer=7, alpha=a)
-        rl.draw_text(self.glyph, int(self.x), int(self.y), self.size, col)
+        text.draw(self.glyph, self.x, self.y, self.size, col)
 
 
 @dataclass

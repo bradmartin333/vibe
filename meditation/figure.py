@@ -455,7 +455,9 @@ class StickFigure:
             head: rl.Vector2 = rl.Vector2(
                 snapshot[self.HEAD].x + ox, snapshot[self.HEAD].y + oy
             )
-            rl.draw_circle_lines_v(head, 10.0 * self.scale, col)
+            # A 1-unit ring rather than a GL line, which is 1 canvas pixel at any zoom
+            radius: float = 10.0 * self.scale
+            rl.draw_ring(head, radius - 0.5, radius + 0.5, 0.0, 360.0, 36, col)
 
     def draw_ghost_trail(self) -> None:
         """Draw faded afterimages of the figure from recent snapshots."""

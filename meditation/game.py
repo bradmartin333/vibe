@@ -4,6 +4,7 @@ import asyncio
 
 import pyray as rl
 
+from meditation import text
 from meditation.anomalies import Anomalies
 from meditation.atmosphere import Atmosphere
 from meditation.breath_motes import BreathMotes
@@ -31,16 +32,17 @@ async def run() -> None:
         rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_MSAA_4X_HINT  # type: ignore[arg-type]
     )
     rl.init_window(INIT_W, INIT_H, TITLE)
-    if not IS_WEB:
+    if IS_WEB:
+        # Closing the window would leave a frozen canvas; the tab closes instead
+        rl.set_exit_key(rl.KEY_NULL)
+    else:
         # The browser already paces frames via requestAnimationFrame
         rl.set_target_fps(60)
 
     # Start from the real viewport (the browser canvas fills the whole window)
     view: Viewport = sync_canvas()
-    start_w: int = view.width
-    start_h: int = view.height
-    cx: float = start_w / 2.0
-    cy: float = start_h / 2.0
+    cx: float = view.width / 2.0
+    cy: float = view.height / 2.0
 
     # Scales world-unit (CSS pixel) drawing up to device pixels in the browser
     camera: rl.Camera2D = rl.Camera2D(
@@ -49,12 +51,12 @@ async def run() -> None:
 
     figure: StickFigure = StickFigure(cx, cy)
     breathing: BreathingGuide = BreathingGuide(cx, cy)
-    atmosphere: Atmosphere = Atmosphere(start_w, start_h)
+    atmosphere: Atmosphere = Atmosphere(view.width, view.height)
     sacred: SacredGeometry = SacredGeometry()
     anomalies: Anomalies = Anomalies()
     motes: BreathMotes = BreathMotes()
-    fish: FishSchool = FishSchool(start_w, start_h)
-    whales: WhalePod = WhalePod(start_w, start_h)
+    fish: FishSchool = FishSchool(view.width, view.height)
+    whales: WhalePod = WhalePod(view.width, view.height)
     spacebar_fx: SpacebarEffects = SpacebarEffects()
 
     intro_timer: float = 6.0  # seconds to display the hint text
@@ -63,6 +65,7 @@ async def run() -> None:
         dt: float = rl.get_frame_time()
         view = sync_canvas()
         camera.zoom = view.scale
+        text.set_pixel_scale(view.scale)
         w: int = view.width
         h: int = view.height
 
@@ -105,7 +108,7 @@ async def run() -> None:
         # Whales
         whales.update(dt, w, h)
         if rl.is_mouse_button_pressed(rl.MOUSE_BUTTON_LEFT):
-            mp: rl.Vector2 = pointer_position(view)
+            mp: rl.Vector2 = pointer_position()
             fish.handle_click(mp.x, mp.y)
             whales.handle_click(mp.x, mp.y)
 
@@ -169,14 +172,8 @@ async def run() -> None:
             fade: float = min(1.0, intro_timer / 2.0)
             hint: str = "good meditation is good, bad meditation is good"
             fs: int = 18
-            tw: int = rl.measure_text(hint, fs)
-            rl.draw_text(
-                hint,
-                (w - tw) // 2,
-                40,
-                fs,
-                grey(190, int(fade * 255)),
-            )
+            tw: float = text.measure(hint, fs)
+            text.draw(hint, (w - tw) / 2, 40, fs, grey(190, int(fade * 255)))
 
         rl.end_mode_2d()
         rl.end_drawing()
