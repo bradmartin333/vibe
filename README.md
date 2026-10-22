@@ -12,7 +12,7 @@ uv run python main.py
 
 - arrow keys or WASD to move
 - spacebar for more effects
-- esc to exit
+- esc to exit (desktop only - close the tab on the web)
 - left click fish for bubbles
 - `t` key to cycle wobbliness
 

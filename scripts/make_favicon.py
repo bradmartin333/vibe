@@ -84,6 +84,8 @@ def build_figure() -> Figure:
     head_bottom: Point = (head_center[0], head_center[1] + head_radius)
 
     bones: list[tuple[Point, Point]] = []
+    a: int
+    b: int
     for a, b, _ in figure.bones:
         ja: Joint = figure.joints[a]
         jb: Joint = figure.joints[b]
@@ -126,6 +128,10 @@ def render_favicon() -> rl.Image:
     figure: Figure = build_figure()
     backdrop: rl.Color = grey(6)
     halo: rl.Color = hue_shift(5.0, saturation=0.55, brightness=0.8)
+    r: float
+    g: float
+    b: float
+    a: float
     for y in range(SIZE):
         for x in range(SIZE):
             r, g, b, a = shade((x + 0.5, y + 0.5), figure, backdrop, halo)
