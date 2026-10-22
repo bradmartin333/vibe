@@ -23,7 +23,6 @@ pushes to `main` build a WebAssembly version with [pygbag](https://pygame-web.gi
 use the commands below to launch the web build locally at http://127.0.0.1:8000 (not `localhost` - on `localhost` the pygbag runtime looks for packages on a local dev server)
 
 ```
-mkdir -p build/vibe && cp -r main.py meditation build/vibe/
-uvx pygbag==0.9.3 --PYBUILD 3.14 --ume_block 0 --template web/vibe.tmpl --icon web/favicon.png --title "v i b e" --build build/vibe
+scripts/build_web.sh
 uv run python -m http.server -d build/vibe/build/web --bind 127.0.0.1
 ```

@@ -38,17 +38,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
-      - name: Assemble web sources
-        run: |
-          mkdir -p build/vibe
-          cp -r main.py meditation build/vibe/
-
       - name: Build WebAssembly bundle with pygbag
-        run: >-
-          uvx pygbag==0.9.3
-          --PYBUILD 3.14 --ume_block 0
-          --template web/vibe.tmpl --icon web/favicon.png --title "v i b e"
-          --build build/vibe
+        run: scripts/build_web.sh
 
       - name: Deploy to PythonAnywhere
         env:
