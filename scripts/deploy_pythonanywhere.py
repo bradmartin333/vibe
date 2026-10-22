@@ -117,14 +117,19 @@ def ensure_webapp(session: requests.Session, config: Config) -> str:
     return config.domain
 
 
-def upload_dir(session: requests.Session, config: Config, local_dir: Path) -> None:
-    """Upload every file under local_dir into the remote site directory."""
+def upload_dir(session: requests.Session, config: Config, local_dir: Path) -> set[str]:
+    """Upload every file under local_dir into the remote site directory.
+
+    Returns the remote paths that were uploaded.
+    """
     files: list[Path] = sorted(p for p in local_dir.rglob("*") if p.is_file())
     if not files:
         sys.exit(f"no files to upload in {local_dir}")
+    uploaded: set[str] = set()
     for path in files:
         remote: str = f"{config.remote_dir}/{path.relative_to(local_dir).as_posix()}"
         print(f"uploading {remote}")
+        uploaded.add(remote)
         with path.open("rb") as fh:
             check(
                 session.post(
@@ -133,6 +138,38 @@ def upload_dir(session: requests.Session, config: Config, local_dir: Path) -> No
                     timeout=TIMEOUT_S,
                 )
             )
+    return uploaded
+
+
+def list_remote_files(
+    session: requests.Session, config: Config, directory: str
+) -> list[str]:
+    """Return the paths of all files under a remote directory (none if it is missing)."""
+    response: requests.Response = session.get(
+        f"{config.api_base}/files/path{directory}/", timeout=TIMEOUT_S
+    )
+    if response.status_code == 404:
+        return []
+    entries: dict[str, dict[str, str]] = check(response).json()
+    paths: list[str] = []
+    for name, entry in entries.items():
+        path: str = f"{directory}/{name}"
+        if entry["type"] == "directory":
+            paths.extend(list_remote_files(session, config, path))
+        else:
+            paths.append(path)
+    return paths
+
+
+def remove_stale_files(
+    session: requests.Session, config: Config, keep: set[str]
+) -> None:
+    """Delete files left in the site directory by earlier builds."""
+    for path in list_remote_files(session, config, config.remote_dir):
+        if path in keep:
+            continue
+        print(f"removing stale {path}")
+        check(session.delete(f"{config.api_base}/files/path{path}", timeout=TIMEOUT_S))
 
 
 def ensure_root_mapping(session: requests.Session, config: Config) -> None:
@@ -145,7 +182,7 @@ def ensure_root_mapping(session: requests.Session, config: Config) -> None:
     for mapping in mappings:
         if mapping["url"] != "/":
             continue
-        if mapping["path"] != target["path"]:
+        if str(mapping["path"]).rstrip("/") != config.remote_dir:
             print(f"updating static mapping / -> {target['path']}")
             check(
                 session.patch(f"{url}{mapping['id']}/", data=target, timeout=TIMEOUT_S)
@@ -176,7 +213,8 @@ def main() -> None:
     config: Config = load_config()
     session: requests.Session = make_session(config)
     config = replace(config, domain=ensure_webapp(session, config))
-    upload_dir(session, config, local_dir)
+    uploaded: set[str] = upload_dir(session, config, local_dir)
+    remove_stale_files(session, config, keep=uploaded)
     ensure_root_mapping(session, config)
     reload_webapp(session, config)
     print(f"deployed to https://{config.domain}/")
