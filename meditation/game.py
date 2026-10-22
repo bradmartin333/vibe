@@ -1,5 +1,8 @@
 """Main game loop - ties all meditation systems together."""
 
+import asyncio
+import sys
+
 import pyray as rl
 
 from meditation.anomalies import Anomalies
@@ -18,13 +21,19 @@ INIT_H: int = 600
 TITLE: str = "v i b e"
 
 
-def run() -> None:
-    """Initialise the window and run the meditation loop until closed."""
+async def run() -> None:
+    """Initialise the window and run the meditation loop until closed.
+
+    The loop is async so it can yield to the browser event loop once per
+    frame when running as WebAssembly under pygbag.
+    """
     rl.set_config_flags(
         rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_MSAA_4X_HINT  # type: ignore[arg-type]
     )
     rl.init_window(INIT_W, INIT_H, TITLE)
     rl.set_target_fps(60)
+    if sys.platform == "emscripten":
+        _fit_browser_canvas()
 
     cx: float = INIT_W / 2.0
     cy: float = INIT_H / 2.0
@@ -159,4 +168,14 @@ def run() -> None:
 
         rl.end_drawing()
 
+        # Hand control back to the browser (no-op cost on desktop)
+        await asyncio.sleep(0)
+
     rl.close_window()
+
+
+def _fit_browser_canvas() -> None:
+    """Resize the canvas to fill the browser window (pygbag builds only)."""
+    import platform
+
+    platform.window.window_resize()  # type: ignore[attr-defined]
