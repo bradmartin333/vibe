@@ -15,14 +15,13 @@ from pathlib import Path
 import pyray as rl
 
 from meditation.colors import GLOW, grey, hue_shift
-from meditation.figure import StickFigure
+from meditation.figure import Joint, StickFigure
 
 OUT_PATH: Path = Path(__file__).resolve().parent.parent / "web" / "favicon.png"
 SIZE: int = 128
 HALO_RADIUS: float = SIZE * 0.45
 HALO_WIDTH: float = SIZE / 28.0
 FIGURE_HEIGHT: float = SIZE * 0.62  # head top to feet
-HEAD_RADIUS: float = 11.0  # figure units, as in StickFigure._render
 LINE_WIDTH: float = 5.0  # figure units; thicker than in-game so it reads at 16px
 
 Point = tuple[float, float]
@@ -69,7 +68,7 @@ def over(top: rl.Color, alpha: float, below: RGBA) -> RGBA:
 def build_figure() -> Figure:
     """Scale StickFigure's rest pose into the middle of the icon."""
     figure: StickFigure = StickFigure(0.0, 0.0)
-    top: float = min(j.rest_y for j in figure.joints) - HEAD_RADIUS
+    top: float = min(j.rest_y for j in figure.joints) - StickFigure.HEAD_RADIUS
     bottom: float = max(j.rest_y for j in figure.joints)
     scale: float = FIGURE_HEIGHT / (bottom - top)
     mid: float = SIZE / 2.0
@@ -79,15 +78,15 @@ def build_figure() -> Figure:
         """Map figure-space coordinates to pixels."""
         return (mid + x * scale, offset_y + y * scale)
 
-    head = figure.joints[StickFigure.HEAD]
+    head: Joint = figure.joints[StickFigure.HEAD]
     head_center: Point = to_px(head.rest_x, head.rest_y)
-    head_radius: float = HEAD_RADIUS * scale
+    head_radius: float = StickFigure.HEAD_RADIUS * scale
     head_bottom: Point = (head_center[0], head_center[1] + head_radius)
 
     bones: list[tuple[Point, Point]] = []
     for a, b, _ in figure.bones:
-        ja = figure.joints[a]
-        jb = figure.joints[b]
+        ja: Joint = figure.joints[a]
+        jb: Joint = figure.joints[b]
         # The neck attaches to the bottom of the head ring, not its centre
         pa: Point = (
             head_bottom if a == StickFigure.HEAD else to_px(ja.rest_x, ja.rest_y)

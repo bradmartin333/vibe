@@ -14,7 +14,7 @@ from meditation.fish import FishSchool
 from meditation.sacred import SacredGeometry
 from meditation.whale import WhalePod
 from meditation.spacebar import SpacebarEffects
-from meditation.web import sync_canvas
+from meditation.web import IS_WEB, Viewport, pointer_position, sync_canvas
 
 INIT_W: int = 800
 INIT_H: int = 600
@@ -31,31 +31,40 @@ async def run() -> None:
         rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_MSAA_4X_HINT  # type: ignore[arg-type]
     )
     rl.init_window(INIT_W, INIT_H, TITLE)
-    rl.set_target_fps(60)
+    if not IS_WEB:
+        # The browser already paces frames via requestAnimationFrame
+        rl.set_target_fps(60)
 
-    # Scales CSS-pixel drawing up to device pixels in the browser
-    camera: rl.Camera2D = rl.Camera2D(rl.Vector2(0, 0), rl.Vector2(0, 0), 0.0, 1.0)
+    # Start from the real viewport (the browser canvas fills the whole window)
+    view: Viewport = sync_canvas()
+    start_w: int = view.width
+    start_h: int = view.height
+    cx: float = start_w / 2.0
+    cy: float = start_h / 2.0
 
-    cx: float = INIT_W / 2.0
-    cy: float = INIT_H / 2.0
+    # Scales world-unit (CSS pixel) drawing up to device pixels in the browser
+    camera: rl.Camera2D = rl.Camera2D(
+        rl.Vector2(0, 0), rl.Vector2(0, 0), 0.0, view.scale
+    )
 
     figure: StickFigure = StickFigure(cx, cy)
     breathing: BreathingGuide = BreathingGuide(cx, cy)
-    atmosphere: Atmosphere = Atmosphere(INIT_W, INIT_H)
+    atmosphere: Atmosphere = Atmosphere(start_w, start_h)
     sacred: SacredGeometry = SacredGeometry()
     anomalies: Anomalies = Anomalies()
     motes: BreathMotes = BreathMotes()
-    fish: FishSchool = FishSchool(INIT_W, INIT_H)
-    whales: WhalePod = WhalePod(INIT_W, INIT_H)
+    fish: FishSchool = FishSchool(start_w, start_h)
+    whales: WhalePod = WhalePod(start_w, start_h)
     spacebar_fx: SpacebarEffects = SpacebarEffects()
 
     intro_timer: float = 6.0  # seconds to display the hint text
 
     while not rl.window_should_close():
         dt: float = rl.get_frame_time()
-        camera.zoom = sync_canvas()
-        w: int = round(rl.get_screen_width() / camera.zoom)
-        h: int = round(rl.get_screen_height() / camera.zoom)
+        view = sync_canvas()
+        camera.zoom = view.scale
+        w: int = view.width
+        h: int = view.height
 
         # -- update ------------------------------------------------------ #
         figure.update(dt, w, h)
@@ -96,8 +105,7 @@ async def run() -> None:
         # Whales
         whales.update(dt, w, h)
         if rl.is_mouse_button_pressed(rl.MOUSE_BUTTON_LEFT):
-            # Mouse is reported in CSS pixels, which are already world units
-            mp: rl.Vector2 = rl.get_mouse_position()
+            mp: rl.Vector2 = pointer_position(view)
             fish.handle_click(mp.x, mp.y)
             whales.handle_click(mp.x, mp.y)
 

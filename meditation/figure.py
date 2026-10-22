@@ -111,6 +111,8 @@ class StickFigure:
     an organic, wobbly feel.
     """
 
+    HEAD_RADIUS: float = 11.0  # head ring radius at scale 1.0
+
     # Joint indices
     HEAD: int = 0
     NECK: int = 1
@@ -517,7 +519,7 @@ class StickFigure:
 
         # Head - large circle (outline only)
         head_pos: rl.Vector2 = self._joint_world(self.HEAD)
-        head_radius: float = 11.0 * self.scale
+        head_radius: float = self.HEAD_RADIUS * self.scale
 
         # Draw head as wobbly circle outline
         segments: int = 24
