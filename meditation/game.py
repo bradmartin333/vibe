@@ -1,5 +1,7 @@
 """Main game loop - ties all meditation systems together."""
 
+import asyncio
+
 import pyray as rl
 
 from meditation.anomalies import Anomalies
@@ -12,19 +14,27 @@ from meditation.fish import FishSchool
 from meditation.sacred import SacredGeometry
 from meditation.whale import WhalePod
 from meditation.spacebar import SpacebarEffects
+from meditation.web import sync_canvas
 
 INIT_W: int = 800
 INIT_H: int = 600
 TITLE: str = "v i b e"
 
 
-def run() -> None:
-    """Initialise the window and run the meditation loop until closed."""
+async def run() -> None:
+    """Initialise the window and run the meditation loop until closed.
+
+    The loop is async so it can yield to the browser event loop once per
+    frame when running as WebAssembly under pygbag.
+    """
     rl.set_config_flags(
         rl.FLAG_WINDOW_RESIZABLE | rl.FLAG_MSAA_4X_HINT  # type: ignore[arg-type]
     )
     rl.init_window(INIT_W, INIT_H, TITLE)
     rl.set_target_fps(60)
+
+    # Scales CSS-pixel drawing up to device pixels in the browser
+    camera: rl.Camera2D = rl.Camera2D(rl.Vector2(0, 0), rl.Vector2(0, 0), 0.0, 1.0)
 
     cx: float = INIT_W / 2.0
     cy: float = INIT_H / 2.0
@@ -43,8 +53,9 @@ def run() -> None:
 
     while not rl.window_should_close():
         dt: float = rl.get_frame_time()
-        w: int = rl.get_screen_width()
-        h: int = rl.get_screen_height()
+        camera.zoom = sync_canvas()
+        w: int = round(rl.get_screen_width() / camera.zoom)
+        h: int = round(rl.get_screen_height() / camera.zoom)
 
         # -- update ------------------------------------------------------ #
         figure.update(dt, w, h)
@@ -85,6 +96,7 @@ def run() -> None:
         # Whales
         whales.update(dt, w, h)
         if rl.is_mouse_button_pressed(rl.MOUSE_BUTTON_LEFT):
+            # Mouse is reported in CSS pixels, which are already world units
             mp: rl.Vector2 = rl.get_mouse_position()
             fish.handle_click(mp.x, mp.y)
             whales.handle_click(mp.x, mp.y)
@@ -106,6 +118,7 @@ def run() -> None:
         # -- draw -------------------------------------------------------- #
         rl.begin_drawing()
         rl.clear_background(grey(6))
+        rl.begin_mode_2d(camera)
 
         # Atmosphere particles and shooting stars
         atmosphere.draw_particles()
@@ -157,6 +170,10 @@ def run() -> None:
                 grey(190, int(fade * 255)),
             )
 
+        rl.end_mode_2d()
         rl.end_drawing()
+
+        # Hand control back to the browser (no-op cost on desktop)
+        await asyncio.sleep(0)
 
     rl.close_window()

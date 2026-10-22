@@ -351,10 +351,10 @@ class StickFigure:
 
         # Player input — gentle nudge forces
         force: float = 100.0
-        move_left: bool = rl.is_key_down(rl.KEY_LEFT)
-        move_right: bool = rl.is_key_down(rl.KEY_RIGHT)
-        move_up: bool = rl.is_key_down(rl.KEY_UP)
-        move_down: bool = rl.is_key_down(rl.KEY_DOWN)
+        move_left: bool = rl.is_key_down(rl.KEY_LEFT) or rl.is_key_down(rl.KEY_A)
+        move_right: bool = rl.is_key_down(rl.KEY_RIGHT) or rl.is_key_down(rl.KEY_D)
+        move_up: bool = rl.is_key_down(rl.KEY_UP) or rl.is_key_down(rl.KEY_W)
+        move_down: bool = rl.is_key_down(rl.KEY_DOWN) or rl.is_key_down(rl.KEY_S)
 
         if move_left:
             self.vx -= force * dt
