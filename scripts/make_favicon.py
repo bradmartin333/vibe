@@ -1,13 +1,15 @@
-"""Render web/favicon.png: the meditating stick figure inside a glowing halo.
+"""Render web/favicon.png: the meditating stick figure inside a violet halo.
 
 The figure is drawn from StickFigure's own rest pose, so the icon stays in
-sync with the game. Drawing happens at a large size with raylib's CPU-side
-image API (no window needed) and is then downscaled for smooth edges.
+sync with the game. Every pixel is shaded from signed distances to the
+shapes (round-capped bones, head ring, halo), which gives smooth edges and
+joints that always overlap. Everything outside the halo is transparent.
 
 Usage: ``uv run python -m scripts.make_favicon``
 """
 
 import math
+from dataclasses import dataclass
 from pathlib import Path
 
 import pyray as rl
@@ -16,66 +18,132 @@ from meditation.colors import GLOW, grey, hue_shift
 from meditation.figure import StickFigure
 
 OUT_PATH: Path = Path(__file__).resolve().parent.parent / "web" / "favicon.png"
-DRAW_SIZE: int = 512
-OUT_SIZE: int = 128
-HEAD_RADIUS: float = 11.0
-LINE_WIDTH: float = 5.0  # in figure units; thicker than in-game so it reads at 16px
+SIZE: int = 128
+HALO_RADIUS: float = SIZE * 0.45
+HALO_WIDTH: float = SIZE / 28.0
+FIGURE_HEIGHT: float = SIZE * 0.62  # head top to feet
+HEAD_RADIUS: float = 11.0  # figure units, as in StickFigure._render
+LINE_WIDTH: float = 5.0  # figure units; thicker than in-game so it reads at 16px
+
+Point = tuple[float, float]
+RGBA = tuple[float, float, float, float]  # premultiplied, 0..1
 
 
-def draw_ring(
-    image: rl.Image, center: rl.Vector2, radius: float, width: float, color: rl.Color
-) -> None:
-    """Draw a circle outline of the given width as short line segments."""
-    segments: int = 96
-    for i in range(segments):
-        a1: float = (i / segments) * math.tau
-        a2: float = ((i + 1) / segments) * math.tau
-        p1: rl.Vector2 = rl.Vector2(
-            center.x + math.cos(a1) * radius, center.y + math.sin(a1) * radius
-        )
-        p2: rl.Vector2 = rl.Vector2(
-            center.x + math.cos(a2) * radius, center.y + math.sin(a2) * radius
-        )
-        rl.image_draw_line_ex(image, p1, p2, max(1, round(width)), color)
+@dataclass(frozen=True)
+class Figure:
+    """The stick figure's strokes in pixel space."""
+
+    bones: list[tuple[Point, Point]]
+    head_center: Point
+    head_radius: float
+    half_width: float
 
 
-def render_favicon() -> rl.Image:
-    """Draw the favicon at DRAW_SIZE and downscale it to OUT_SIZE."""
-    image: rl.Image = rl.gen_image_color(DRAW_SIZE, DRAW_SIZE, grey(6))
-    mid: float = DRAW_SIZE / 2.0
+def coverage(distance: float, half_width: float) -> float:
+    """Fraction of a pixel covered by a stroke, given distance to its centre."""
+    return max(0.0, min(1.0, half_width - distance + 0.5))
 
-    # Violet halo from the same HSV cycle as the in-game sacred geometry
-    draw_ring(
-        image,
-        rl.Vector2(mid, mid),
-        DRAW_SIZE * 0.45,
-        DRAW_SIZE / 28.0,
-        hue_shift(5.0, saturation=0.55, brightness=0.8),
+
+def segment_distance(p: Point, a: Point, b: Point) -> float:
+    """Shortest distance from point p to the segment a-b."""
+    abx: float = b[0] - a[0]
+    aby: float = b[1] - a[1]
+    length_sq: float = abx * abx + aby * aby
+    t: float = 0.0
+    if length_sq > 0.0:
+        t = max(0.0, min(1.0, ((p[0] - a[0]) * abx + (p[1] - a[1]) * aby) / length_sq))
+    return math.hypot(p[0] - (a[0] + abx * t), p[1] - (a[1] + aby * t))
+
+
+def over(top: rl.Color, alpha: float, below: RGBA) -> RGBA:
+    """Composite a colour with the given coverage over a premultiplied colour."""
+    a: float = alpha * top.a / 255.0
+    return (
+        top.r / 255.0 * a + below[0] * (1.0 - a),
+        top.g / 255.0 * a + below[1] * (1.0 - a),
+        top.b / 255.0 * a + below[2] * (1.0 - a),
+        a + below[3] * (1.0 - a),
     )
 
-    # Fit the figure's rest pose (head top to feet) into the middle of the icon
+
+def build_figure() -> Figure:
+    """Scale StickFigure's rest pose into the middle of the icon."""
     figure: StickFigure = StickFigure(0.0, 0.0)
     top: float = min(j.rest_y for j in figure.joints) - HEAD_RADIUS
     bottom: float = max(j.rest_y for j in figure.joints)
-    scale: float = DRAW_SIZE * 0.62 / (bottom - top)
+    scale: float = FIGURE_HEIGHT / (bottom - top)
+    mid: float = SIZE / 2.0
     offset_y: float = mid - (top + bottom) / 2.0 * scale
 
-    def to_px(index: int) -> rl.Vector2:
-        """Map a joint's rest position to image pixels."""
-        joint = figure.joints[index]
-        return rl.Vector2(mid + joint.rest_x * scale, offset_y + joint.rest_y * scale)
+    def to_px(x: float, y: float) -> Point:
+        """Map figure-space coordinates to pixels."""
+        return (mid + x * scale, offset_y + y * scale)
 
-    width: int = round(LINE_WIDTH * scale)
+    head = figure.joints[StickFigure.HEAD]
+    head_center: Point = to_px(head.rest_x, head.rest_y)
+    head_radius: float = HEAD_RADIUS * scale
+    head_bottom: Point = (head_center[0], head_center[1] + head_radius)
+
+    bones: list[tuple[Point, Point]] = []
     for a, b, _ in figure.bones:
-        if a == StickFigure.HEAD or b == StickFigure.HEAD:
-            continue  # the neck starts at the bottom of the head ring
-        rl.image_draw_line_ex(image, to_px(a), to_px(b), width, GLOW)
-    for index in range(len(figure.joints)):
-        if index != StickFigure.HEAD:
-            rl.image_draw_circle_v(image, to_px(index), width // 2, GLOW)
-    draw_ring(image, to_px(StickFigure.HEAD), HEAD_RADIUS * scale, width, GLOW)
+        ja = figure.joints[a]
+        jb = figure.joints[b]
+        # The neck attaches to the bottom of the head ring, not its centre
+        pa: Point = (
+            head_bottom if a == StickFigure.HEAD else to_px(ja.rest_x, ja.rest_y)
+        )
+        pb: Point = (
+            head_bottom if b == StickFigure.HEAD else to_px(jb.rest_x, jb.rest_y)
+        )
+        bones.append((pa, pb))
 
-    rl.image_resize(image, OUT_SIZE, OUT_SIZE)
+    return Figure(bones, head_center, head_radius, LINE_WIDTH * scale / 2.0)
+
+
+def shade(p: Point, figure: Figure, backdrop: rl.Color, halo: rl.Color) -> RGBA:
+    """Compute the premultiplied colour of the pixel centred at p."""
+    mid: float = SIZE / 2.0
+    from_center: float = math.hypot(p[0] - mid, p[1] - mid)
+    color: RGBA = (0.0, 0.0, 0.0, 0.0)
+
+    # Dark disc out to the halo's outer edge; transparent beyond it
+    color = over(backdrop, coverage(from_center, HALO_RADIUS + HALO_WIDTH / 2.0), color)
+    color = over(
+        halo, coverage(abs(from_center - HALO_RADIUS), HALO_WIDTH / 2.0), color
+    )
+
+    stroke: float = min(segment_distance(p, a, b) for a, b in figure.bones)
+    head_distance: float = abs(
+        math.hypot(p[0] - figure.head_center[0], p[1] - figure.head_center[1])
+        - figure.head_radius
+    )
+    stroke = min(stroke, head_distance)
+    return over(GLOW, coverage(stroke, figure.half_width), color)
+
+
+def render_favicon() -> rl.Image:
+    """Shade every pixel of the favicon."""
+    image: rl.Image = rl.gen_image_color(SIZE, SIZE, rl.BLANK)
+    figure: Figure = build_figure()
+    backdrop: rl.Color = grey(6)
+    halo: rl.Color = hue_shift(5.0, saturation=0.55, brightness=0.8)
+    for y in range(SIZE):
+        for x in range(SIZE):
+            r, g, b, a = shade((x + 0.5, y + 0.5), figure, backdrop, halo)
+            if a <= 0.0:
+                continue
+            # Un-premultiply for the PNG's straight alpha
+            rl.image_draw_pixel(
+                image,
+                x,
+                y,
+                rl.Color(
+                    round(r / a * 255),
+                    round(g / a * 255),
+                    round(b / a * 255),
+                    round(a * 255),
+                ),
+            )
     return image
 
 
