@@ -12,6 +12,7 @@ from meditation.breathing import BreathingGuide
 from meditation.colors import grey
 from meditation.figure import StickFigure
 from meditation.fish import FishSchool
+from meditation.help import HelpOverlay
 from meditation.sacred import SacredGeometry
 from meditation.whale import WhalePod
 from meditation.spacebar import SpacebarEffects
@@ -58,6 +59,7 @@ async def run() -> None:
     fish: FishSchool = FishSchool(view.width, view.height)
     whales: WhalePod = WhalePod(view.width, view.height)
     spacebar_fx: SpacebarEffects = SpacebarEffects()
+    help_overlay: HelpOverlay = HelpOverlay()
 
     intro_timer: float = 6.0  # seconds to display the hint text
 
@@ -107,10 +109,13 @@ async def run() -> None:
         fish.update(dt, w, h)
         # Whales
         whales.update(dt, w, h)
+        help_overlay.update(dt)
         if rl.is_mouse_button_pressed(rl.MOUSE_BUTTON_LEFT):
             mp: rl.Vector2 = pointer_position()
-            fish.handle_click(mp.x, mp.y)
-            whales.handle_click(mp.x, mp.y)
+            # The help button and panel take priority over the scene
+            if not help_overlay.handle_click(mp.x, mp.y):
+                fish.handle_click(mp.x, mp.y)
+                whales.handle_click(mp.x, mp.y)
 
         # Spacebar random effects
         spacebar_fx.update(dt)
@@ -174,6 +179,9 @@ async def run() -> None:
             fs: int = 18
             tw: float = text.measure(hint, fs)
             text.draw(hint, (w - tw) / 2, 40, fs, grey(190, int(fade * 255)))
+
+        # Controls help button and panel, on top of everything
+        help_overlay.draw(w)
 
         rl.end_mode_2d()
         rl.end_drawing()

@@ -26,6 +26,11 @@ def _snap_size(size: float) -> float:
     return multiple * BASE_SIZE / _pixel_scale
 
 
+def height(size: float) -> float:
+    """Return the glyph height in world units of text drawn at ``size``."""
+    return _snap_size(size)
+
+
 def _snap(value: float) -> float:
     """Round a world coordinate to the nearest canvas pixel."""
     return round(value * _pixel_scale) / _pixel_scale
