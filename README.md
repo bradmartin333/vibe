@@ -10,7 +10,7 @@ uv run python main.py
 
 ## controls
 
-- arrow keys to move
+- arrow keys or WASD to move
 - spacebar for more effects
 - esc to exit
 - left click fish for bubbles
@@ -24,6 +24,6 @@ use the commands below to launch the web build locally at http://127.0.0.1:8000 
 
 ```
 mkdir -p build/vibe && cp -r main.py meditation build/vibe/
-uvx pygbag==0.9.3 --PYBUILD 3.14 --ume_block 0 --build build/vibe
+uvx pygbag==0.9.3 --PYBUILD 3.14 --ume_block 0 --template web/vibe.tmpl --icon web/favicon.png --title "v i b e" --build build/vibe
 uv run python -m http.server -d build/vibe/build/web --bind 127.0.0.1
 ```

@@ -1,7 +1,6 @@
 """Main game loop - ties all meditation systems together."""
 
 import asyncio
-import sys
 
 import pyray as rl
 
@@ -15,6 +14,7 @@ from meditation.fish import FishSchool
 from meditation.sacred import SacredGeometry
 from meditation.whale import WhalePod
 from meditation.spacebar import SpacebarEffects
+from meditation.web import sync_canvas
 
 INIT_W: int = 800
 INIT_H: int = 600
@@ -32,8 +32,9 @@ async def run() -> None:
     )
     rl.init_window(INIT_W, INIT_H, TITLE)
     rl.set_target_fps(60)
-    if sys.platform == "emscripten":
-        _fit_browser_canvas()
+
+    # Scales CSS-pixel drawing up to device pixels in the browser
+    camera: rl.Camera2D = rl.Camera2D(rl.Vector2(0, 0), rl.Vector2(0, 0), 0.0, 1.0)
 
     cx: float = INIT_W / 2.0
     cy: float = INIT_H / 2.0
@@ -52,8 +53,9 @@ async def run() -> None:
 
     while not rl.window_should_close():
         dt: float = rl.get_frame_time()
-        w: int = rl.get_screen_width()
-        h: int = rl.get_screen_height()
+        camera.zoom = sync_canvas()
+        w: int = round(rl.get_screen_width() / camera.zoom)
+        h: int = round(rl.get_screen_height() / camera.zoom)
 
         # -- update ------------------------------------------------------ #
         figure.update(dt, w, h)
@@ -94,6 +96,7 @@ async def run() -> None:
         # Whales
         whales.update(dt, w, h)
         if rl.is_mouse_button_pressed(rl.MOUSE_BUTTON_LEFT):
+            # Mouse is reported in CSS pixels, which are already world units
             mp: rl.Vector2 = rl.get_mouse_position()
             fish.handle_click(mp.x, mp.y)
             whales.handle_click(mp.x, mp.y)
@@ -115,6 +118,7 @@ async def run() -> None:
         # -- draw -------------------------------------------------------- #
         rl.begin_drawing()
         rl.clear_background(grey(6))
+        rl.begin_mode_2d(camera)
 
         # Atmosphere particles and shooting stars
         atmosphere.draw_particles()
@@ -166,16 +170,10 @@ async def run() -> None:
                 grey(190, int(fade * 255)),
             )
 
+        rl.end_mode_2d()
         rl.end_drawing()
 
         # Hand control back to the browser (no-op cost on desktop)
         await asyncio.sleep(0)
 
     rl.close_window()
-
-
-def _fit_browser_canvas() -> None:
-    """Resize the canvas to fill the browser window (pygbag builds only)."""
-    import platform
-
-    platform.window.window_resize()  # type: ignore[attr-defined]

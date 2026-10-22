@@ -47,6 +47,7 @@ jobs:
         run: >-
           uvx pygbag==0.9.3
           --PYBUILD 3.14 --ume_block 0
+          --template web/vibe.tmpl --icon web/favicon.png --title "v i b e"
           --build build/vibe
 
       - name: Deploy to PythonAnywhere
