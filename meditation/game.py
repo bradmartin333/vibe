@@ -14,7 +14,7 @@ from meditation.fish import FishSchool
 from meditation.sacred import SacredGeometry
 from meditation.whale import WhalePod
 from meditation.spacebar import SpacebarEffects
-from meditation.web import sync_canvas
+from meditation.web import sync_canvas, viewport_size
 
 INIT_W: int = 800
 INIT_H: int = 600
@@ -35,18 +35,21 @@ async def run() -> None:
 
     # Scales CSS-pixel drawing up to device pixels in the browser
     camera: rl.Camera2D = rl.Camera2D(rl.Vector2(0, 0), rl.Vector2(0, 0), 0.0, 1.0)
+    camera.zoom = sync_canvas()
 
-    cx: float = INIT_W / 2.0
-    cy: float = INIT_H / 2.0
+    # Start from the real viewport (the browser canvas fills the whole window)
+    start_w, start_h = viewport_size()
+    cx: float = start_w / 2.0
+    cy: float = start_h / 2.0
 
     figure: StickFigure = StickFigure(cx, cy)
     breathing: BreathingGuide = BreathingGuide(cx, cy)
-    atmosphere: Atmosphere = Atmosphere(INIT_W, INIT_H)
+    atmosphere: Atmosphere = Atmosphere(start_w, start_h)
     sacred: SacredGeometry = SacredGeometry()
     anomalies: Anomalies = Anomalies()
     motes: BreathMotes = BreathMotes()
-    fish: FishSchool = FishSchool(INIT_W, INIT_H)
-    whales: WhalePod = WhalePod(INIT_W, INIT_H)
+    fish: FishSchool = FishSchool(start_w, start_h)
+    whales: WhalePod = WhalePod(start_w, start_h)
     spacebar_fx: SpacebarEffects = SpacebarEffects()
 
     intro_timer: float = 6.0  # seconds to display the hint text
@@ -54,8 +57,7 @@ async def run() -> None:
     while not rl.window_should_close():
         dt: float = rl.get_frame_time()
         camera.zoom = sync_canvas()
-        w: int = round(rl.get_screen_width() / camera.zoom)
-        h: int = round(rl.get_screen_height() / camera.zoom)
+        w, h = viewport_size()
 
         # -- update ------------------------------------------------------ #
         figure.update(dt, w, h)
